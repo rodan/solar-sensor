@@ -123,15 +123,11 @@ int main()
             if (buff == 4 || buff == 13) {;   // 4 is used for keepalives, 13 is \r
             } else if (buff == 10 && i == 0) {;
             } else if (buff == 10 && i > 1) {   // if \n
-                //if (buff == 10 && i > 0) {
-                //c->r.in_str.str[i] = 10;
                 c->r.in_str.len = i;
                 ss_process_in_str(c);
                 i = 0;
                 memset(&c->r, 0, sizeof(struct ss_request_s));
-                //} else if ((buff != 0) && (i < H_MAX - 1)) {
             } else if (i < H_MAX - 1) {
-                //fprintf(stdout,"%c",buff);
                 c->r.in_str.str[i] = buff;
                 i++;
             }

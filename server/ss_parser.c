@@ -72,7 +72,7 @@ int ss_process_get_str(ss_connection_t * c)
     if (c->r.method == SS_REQ_LEN) {;
     } else if (c->r.method == SS_REQ_DATA) {
         memset(sql_q, 0, H_MAX);
-        strncat(sql_q, "insert into sensors values ('", H_MAX); // 29 chars to begin with
+        snprintf(sql_q, H_MAX, "insert into sensors values ('"); // 29 chars to begin with
 
         int i, o = 29;
         unsigned char in;
@@ -211,7 +211,7 @@ int ss_process_in_str(ss_connection_t * c)
                 download = 0;
 
                 if (day == 1) {
-                    strncat(fname, "NOW     ", 9);
+                    snprintf(fname, 9, "NOW     ");
                     download = 1;
                 } else {
                     tta = time(NULL) + (day * 86400);
@@ -272,8 +272,8 @@ int ss_process_out(ss_connection_t * c)
         fprintf(stdout, "ss_process_out r.out_str.str='%s'\n",
                 c->r.out_str.str);
 
-    if (verb > 1)
-        ss_log("> %s", c->r.out_str.str);
+    if (verb > 0)
+        ss_log("%s", c->r.out_str.str);
 
     if (write(c->fd_dev, c->r.out_str.str, c->r.out_str.len) !=
         c->r.out_str.len) {

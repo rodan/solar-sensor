@@ -1,6 +1,6 @@
 
 CC      = gcc
-CFLAGS  = -Wall -O2
+CFLAGS  = -g -Wall -O2
 #LDFLAGS = 
 PROGS   = ss_daemon
 
