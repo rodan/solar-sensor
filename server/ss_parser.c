@@ -10,159 +10,7 @@
 #include "ss_log.h"
 #include "ss_sql.h"
 
-int ss_get_method_in_str(ss_request_t * r)
-{
-    size_t skip;
-    char buff[H_MAX];
-
-    if (verb > 3) {
-        fprintf(stdout,
-                "ss_parse_in_str r->in_str.str='%s', r->in_str.len=%d",
-                r->in_str.str, (int)r->in_str.len);
-    }
-    //ss_log("< %s\n",r->in_str.str);
-
-    // 46 is openlog's control char
-    // 0 is buffer garbage
-
-    for (skip = 0; skip < H_MAX - 1; skip++)
-        if (r->in_str.str[skip] != 46 && r->in_str.str[skip] != 0)
-            break;
-
-    strncpy(buff, &r->in_str.str[skip], H_MAX - skip);  // XXX ending 0?
-    r->in_str.skip = skip;
-
-    if (ss_str4_cmp(buff, 'G', 'E', 'T', ' ')) {
-        r->method = SS_REQ_GET;
-        r->target = &r->in_str.str[skip + 4];
-    } else if (ss_str5_cmp(buff, 'E', 'H', 'L', 'O', ' ')) {
-        r->method = SS_REQ_EHLO;
-        r->target = &r->in_str.str[skip + 5];
-    } else if (ss_str4_cmp(buff, 'L', 'E', 'N', ' ')) {
-        r->method = SS_REQ_LEN;
-    } else if (ss_str3_cmp(buff, 'E', 'R', 'R')) {
-        r->method = SS_REQ_ERR;
-    } else if (ss_str2_cmp(buff, 'O', 'K')) {
-        r->method = SS_REQ_OK;
-    } else if (buff[0] > 47 && buff[0] < 58) {  // numbers
-        r->method = SS_REQ_DATA;
-        r->target = &r->in_str.str[skip];
-    } else if (ss_str3_cmp(buff, 'D', 'B', 'G')) {
-        r->method = SS_REQ_DBG;
-    } else {
-        r->method = SS_REQ_UNKNOWN;
-        fprintf(stdout, "DBG unk %d, len=%d, skip=%d\n", r->in_str.str[0],
-                (int)r->in_str.len, (int)r->in_str.skip);
-        return 0;
-    }
-
-    if (verb > 3) {
-        fprintf(stdout, " r->method=%d\n", r->method);
-    }
-
-    return 0;
-}
-
-int ss_process_get_str(ss_connection_t * c)
-{
-    int rc;
-
-    rc = ss_get_method_in_str(&c->r);
-
-    if (c->r.method == SS_REQ_LEN) {;
-    } else if (c->r.method == SS_REQ_DATA) {
-        memset(sql_q, 0, H_MAX);
-        snprintf(sql_q, H_MAX, "insert into sensors values ('"); // 29 chars to begin with
-
-        int i, o = 29;
-        unsigned char in;
-
-        for (i = 0; i < H_MAX - c->r.in_str.skip; i++) {
-            in = c->r.target[i];
-            if (in == 'C' || in == 'c' || in == 'p' || in == 'm'
-                || in == 'L' || in == '%') {
-            }                   // ignore units
-            else if (in == ' ') {       // replace spaces with sql delimiters
-                strncat(sql_q, "','", 4);
-                o += 3;
-            } else if (in == 0 || in == 10 || in == 13) {       // eol
-                strncat(sql_q, "');\0", 4);
-                break;
-            } else {
-                sql_q[o] = in;
-                o++;
-            }
-        }
-        sql_exec(sql_q);
-    } else if (c->r.method == SS_REQ_OK) {
-        return 10;
-    } else if (c->r.method == SS_REQ_DBG) {;
-    } else {
-        //return 1; 
-        return 0;               //temp
-    }
-    return 0;
-}
-
-int ss_get_read(ss_connection_t * reply)
-{
-
-    int i;
-    fd_set read_fd_set;
-    struct timeval timeout;
-    char buff;
-
-    i = 0;
-    // wait for a reply
-    FD_ZERO(&read_fd_set);
-    FD_SET(reply->fd_dev, &read_fd_set);
-
-    // if nothing comes back in X seconds, consider the GET reply finished
-    for (;;) {
-        // set the timeout each time since it gets rewritten
-        // by the previous select
-        timeout.tv_sec = 4;
-        timeout.tv_usec = 0;
-        switch (select(reply->fd_dev + 1, &read_fd_set, NULL, NULL, &timeout)) {
-        case -1:
-            fprintf(stderr, "select() error\n");
-            return -1;
-            break;
-        case 0:
-            fprintf(stderr, "select() timeout\n");
-            return 1;
-            break;
-        case 1:
-            if (read(reply->fd_dev, &buff, 1) == 1) {
-                if (buff == 4 || buff == 13) {; // 4 is used for keepalives - ignore
-                } else if (buff == 10 && i == 0) {;     // \n and nothing else - ignore
-                } else if (buff == 10 && i > 2) {       // string_i_chars_long\n
-                    reply->r.in_str.len = i;
-                    switch (ss_process_get_str(reply)) {
-                    case 1:
-                        // the reply is not an expected one
-                        return 1;
-                        break;
-                    case 10:
-                        // got an OK
-                        return 0;
-                        break;
-                    }
-
-                    i = 0;
-                    memset(&reply->r, 0, sizeof(struct ss_request_s));
-                } else if (i < H_MAX - 1) {
-                    reply->r.in_str.str[i] = buff;
-                    i++;
-                }
-                buff = 0;
-            }
-            break;
-        }
-    }
-
-    return 0;
-}
+// process generic incoming strings
 
 int ss_process_in_str(ss_connection_t * c)
 {
@@ -176,7 +24,7 @@ int ss_process_in_str(ss_connection_t * c)
     time_t tta;
     ss_connection_t *reply;
     char fname[9];
-    int retr=0, download=0;
+    int retr = 0, download = 0;
 
     rc = ss_get_method_in_str(&c->r);
 
@@ -235,9 +83,6 @@ int ss_process_in_str(ss_connection_t * c)
 
                 if (download == 1) {
 
-                    if (verb > 2)
-                        fprintf(stdout, "GET %s\n", fname);
-
                     if (day < 1)
                         set_file_retr(fname, retr + 1);
 
@@ -266,19 +111,190 @@ int ss_process_in_str(ss_connection_t * c)
     return 0;
 }
 
+// recognize generic incoming strings
+
+int ss_get_method_in_str(ss_request_t * r)
+{
+    size_t skip;
+    char buff[H_MAX];
+
+    if (verb > 3) {
+        fprintf(stdout,
+                "ss_parse_in_str r->in_str.str='%s', r->in_str.len=%d",
+                r->in_str.str, (int)r->in_str.len);
+    }
+    //ss_log("< %s\n",r->in_str.str);
+
+    // 46 is openlog's control char
+    // 0 is buffer garbage
+
+    for (skip = 0; skip < H_MAX - 1; skip++)
+        if (r->in_str.str[skip] != 46 && r->in_str.str[skip] != 0)
+            break;
+
+    strncpy(buff, &r->in_str.str[skip], H_MAX - skip);  // XXX ending 0?
+    r->in_str.skip = skip;
+
+    if (ss_str4_cmp(buff, 'G', 'E', 'T', ' ')) {
+        r->method = SS_REQ_GET;
+        r->target = &r->in_str.str[skip + 4];
+    } else if (ss_str5_cmp(buff, 'E', 'H', 'L', 'O', ' ')) {
+        r->method = SS_REQ_EHLO;
+        r->target = &r->in_str.str[skip + 5];
+    } else if (ss_str4_cmp(buff, 'L', 'E', 'N', ' ')) {
+        r->method = SS_REQ_LEN;
+        r->target = &r->in_str.str[skip + 4];
+    } else if (ss_str3_cmp(buff, 'E', 'R', 'R')) {
+        r->method = SS_REQ_ERR;
+    } else if (ss_str2_cmp(buff, 'O', 'K')) {
+        r->method = SS_REQ_OK;
+    } else if (buff[0] > 47 && buff[0] < 58) {  // numbers
+        r->method = SS_REQ_DATA;
+        r->target = &r->in_str.str[skip];
+    } else if (ss_str3_cmp(buff, 'D', 'B', 'G')) {
+        r->method = SS_REQ_DBG;
+    } else {
+        r->method = SS_REQ_UNKNOWN;
+        fprintf(stdout, "DBG unk %d, len=%d, skip=%d\n", r->in_str.str[0],
+                (int)r->in_str.len, (int)r->in_str.skip);
+        if (verb > 0)
+            fprintf(stdout, "%s\n", &r->in_str.str[skip]);
+        return 0;
+    }
+
+    if (verb > 3) {
+        fprintf(stdout, " r->method=%d\n", r->method);
+    }
+
+    return 0;
+}
+
+// send out strings
+
 int ss_process_out(ss_connection_t * c)
 {
-    if (verb > 3)
-        fprintf(stdout, "ss_process_out r.out_str.str='%s'\n",
-                c->r.out_str.str);
 
-    if (verb > 0)
+    if (verb > 0) {
         ss_log("%s", c->r.out_str.str);
+        fprintf(stdout, "%s", c->r.out_str.str);
+    }
 
     if (write(c->fd_dev, c->r.out_str.str, c->r.out_str.len) !=
         c->r.out_str.len) {
         fprintf(stdout, "error ss_process_out failed\n");
         return 1;
+    }
+
+    return 0;
+}
+
+// process the reply to a GET command
+
+int ss_process_get_str(ss_connection_t * c)
+{
+    int rc;
+
+    rc = ss_get_method_in_str(&c->r);
+
+    if (c->r.method == SS_REQ_LEN) {
+        if (verb > 0) {
+            fprintf(stdout, "%s\n", c->r.target);
+        }
+    } else if (c->r.method == SS_REQ_DATA) {
+        memset(sql_q, 0, H_MAX);
+        snprintf(sql_q, H_MAX, "insert into sensors values ('");        // 29 chars to begin with
+
+        int i, o = 29;
+        unsigned char in;
+
+        for (i = 0; i < H_MAX - c->r.in_str.skip; i++) {
+            in = c->r.target[i];
+            if (in == 'C' || in == 'c' || in == 'p' || in == 'm'
+                || in == 'L' || in == '%') {
+            }                   // ignore units
+            else if (in == ' ') {       // replace spaces with sql delimiters
+                strncat(sql_q, "','", 4);
+                o += 3;
+            } else if (in == 0 || in == 10 || in == 13) {       // eol
+                strncat(sql_q, "');\0", 4);
+                break;
+            } else {
+                sql_q[o] = in;
+                o++;
+            }
+        }
+        sql_exec(sql_q);
+    } else if (c->r.method == SS_REQ_OK) {
+        if (verb > 0)
+            fprintf(stdout, "%s\n", &c->r.in_str.str[c->r.in_str.skip]);
+        return 10;
+    } else if (c->r.method == SS_REQ_DBG) {
+        if (verb > 0)
+            fprintf(stdout, "%s\n", &c->r.in_str.str[c->r.in_str.skip]);
+    } else {
+        //return 1; 
+        return 0;               //temp
+    }
+    return 0;
+}
+
+// listen for a reply to a GET command
+
+int ss_get_read(ss_connection_t * reply)
+{
+
+    int i;
+    fd_set read_fd_set;
+    struct timeval timeout;
+    char buff;
+
+    i = 0;
+    // wait for a reply
+    FD_ZERO(&read_fd_set);
+    FD_SET(reply->fd_dev, &read_fd_set);
+
+    // if nothing comes back in X seconds, consider the GET reply finished
+    for (;;) {
+        // set the timeout each time since it gets rewritten
+        // by the previous select
+        timeout.tv_sec = 4;
+        timeout.tv_usec = 0;
+        switch (select(reply->fd_dev + 1, &read_fd_set, NULL, NULL, &timeout)) {
+        case -1:
+            fprintf(stderr, "select() error\n");
+            return -1;
+            break;
+        case 0:
+            fprintf(stderr, "select() timeout\n");
+            return 1;
+            break;
+        case 1:
+            if (read(reply->fd_dev, &buff, 1) == 1) {
+                if (buff == 4 || buff == 13) {; // 4 is used for keepalives - ignore
+                } else if (buff == 10 && i == 0) {;     // \n and nothing else - ignore
+                } else if (buff == 10 && i > 2) {       // string_i_chars_long\n
+                    reply->r.in_str.len = i;
+                    switch (ss_process_get_str(reply)) {
+                    case 1:
+                        // the reply is not an expected one
+                        return 1;
+                        break;
+                    case 10:
+                        // got an OK
+                        return 0;
+                        break;
+                    }
+
+                    i = 0;
+                    memset(&reply->r, 0, sizeof(struct ss_request_s));
+                } else if (i < H_MAX - 1) {
+                    reply->r.in_str.str[i] = buff;
+                    i++;
+                }
+                buff = 0;
+            }
+            break;
+        }
     }
 
     return 0;

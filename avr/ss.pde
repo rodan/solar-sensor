@@ -538,6 +538,7 @@ void parse_cmd(char *cmd, uint8_t cmdsize)
         strncpy(f_name, &cmd[4], 9);
         if (strncmp(f_name, "NOW", 3) == 0) {
             Serial.println(output);
+            console_send_ok();
         } else {
             f_size = openlog_get_fsize(f_name);
             Serial.print("LEN ");
@@ -559,9 +560,9 @@ void parse_cmd(char *cmd, uint8_t cmdsize)
                         Serial.print(f_c[i]);
                     }
                 }
-                Serial.println("OK");
+                console_send_ok();
             } else {
-                Serial.println("ERR");
+                console_send_err();
             }
         }
     } else if ((cmd[0] == 84) && (cmdsize == 16)) {
@@ -574,12 +575,23 @@ void parse_cmd(char *cmd, uint8_t cmdsize)
         t.mon = inp2toi(cmd, 10);
         t.year = inp2toi(cmd, 12) * 100 + inp2toi(cmd, 14);
         DS3231_set(t);
-        Serial.println("OK");
+        console_send_ok();
     } else {
-        Serial.println("ERR");
+        console_send_err();
     }
 
 }
+
+void console_send_ok()
+{
+    Serial.println("OK");
+}
+
+void console_send_err()
+{
+    Serial.println("ERR");
+}
+
 
 //   OpenLog related
 

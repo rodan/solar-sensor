@@ -46,19 +46,17 @@ int main()
 
     if (fopen(lockfile, "r") == NULL) {
         lock_file = fopen(lockfile, "a");
-        if ( lock_file == NULL ) {
-            fprintf(stderr, "error: cannot create %s file\n",lockfile);
+        if (lock_file == NULL) {
+            fprintf(stderr, "error: cannot create %s file\n", lockfile);
             return 1;
         } else {
-            fprintf(lock_file,"      %d\n",getpid());
+            fprintf(lock_file, "      %d\n", getpid());
             fclose(lock_file);
         }
     } else {
-        fprintf(stderr, "error: %s lock file already in place\n",lockfile);
+        fprintf(stderr, "error: %s lock file already in place\n", lockfile);
         return 1;
     }
-    
-
 
     logfile = getenv("logfile");
     if (logfile == NULL)
@@ -97,7 +95,6 @@ int main()
         return 1;
     }
 
-
     if (init_log(logfile, "a") == 1) {
         fprintf(stderr, "error: logfile cannot be opened\n");
         return 1;
@@ -120,7 +117,7 @@ int main()
 
     for (;;) {
         if (read(c->fd_dev, &buff, 1) == 1) {
-            if (buff == 4 || buff == 13) {;   // 4 is used for keepalives, 13 is \r
+            if (buff == 4 || buff == 13) {;     // 4 is used for keepalives, 13 is \r
             } else if (buff == 10 && i == 0) {;
             } else if (buff == 10 && i > 1) {   // if \n
                 c->r.in_str.len = i;

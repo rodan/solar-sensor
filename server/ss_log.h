@@ -7,7 +7,6 @@ int init_log(char *file, char *mode);
 int close_log();
 int ss_log(char *fmt, ...);
 
-char verb;
 FILE *log_file;
 
 #endif

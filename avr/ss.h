@@ -23,4 +23,7 @@ void ir_decode();
 void console_decode();
 void parse_cmd(char *cmd, uint8_t cmdsize);
 
+void console_send_ok();
+void console_send_err();
+
 #endif

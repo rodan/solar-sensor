@@ -10,7 +10,7 @@ sqlite3 *db;
 
 static int callback_db(void *NotUsed, int argc, char **argv, char **azColName)
 {
-    snprintf(sql_r, H_MAX, "%s" ,argv[0] ? argv[0] : "NULL");
+    snprintf(sql_r, H_MAX, "%s", argv[0] ? argv[0] : "NULL");
     return 0;
 }
 
@@ -54,11 +54,11 @@ int get_file_retr(char *fname)
     int rv;
     char q[H_MAX];
 
-    snprintf(q,H_MAX,"select count(*) from files where fname='%s';", fname);
+    snprintf(q, H_MAX, "select count(*) from files where fname='%s';", fname);
 
     rv = sql_exec_i(q);
-    if ( rv == 1 ) {
-        snprintf(q,H_MAX,"select retr from files where fname='%s';", fname);
+    if (rv == 1) {
+        snprintf(q, H_MAX, "select retr from files where fname='%s';", fname);
         rv = sql_exec_i(q);
         return rv;
     }
@@ -70,7 +70,8 @@ int set_file_retr(char *fname, int retr)
     int rv;
     char q[H_MAX];
 
-    snprintf(q,H_MAX,"update files set retr='%d' where fname='%s';", retr, fname);
+    snprintf(q, H_MAX, "update files set retr='%d' where fname='%s';", retr,
+             fname);
 
     rv = sql_exec(q);
 
@@ -82,7 +83,8 @@ int init_file_retr(char *fname, int len, int retr)
     int rv;
     char q[H_MAX];
 
-    snprintf(q,H_MAX,"insert into files values ('%s','%d','%d');", fname, len, retr);
+    snprintf(q, H_MAX, "insert into files values ('%s','%d','%d');", fname, len,
+             retr);
 
     rv = sql_exec(q);
 
@@ -96,17 +98,23 @@ int sql_exec(char *query)
 
     rc = sqlite3_exec(db, query, callback_db, 0, &zErrMsg);
     if (rc != SQLITE_OK) {
-        fprintf(stderr, "SQL error: %s\n", zErrMsg);
+        if (strncmp(zErrMsg, "column date is not unique", 25))
+            fprintf(stderr, "SQL error: %s\n", zErrMsg);
+        else {
+            if (verb > 0)
+                fprintf(stdout, ".");
+        }
         sqlite3_free(zErrMsg);
         return 1;
-    }
+    } else if (verb > 0)
+        fprintf(stdout, "+");
     return 0;
 }
 
 int sql_exec_i(char *query)
 {
     char *zErrMsg = 0;
-    int rc,rv;
+    int rc, rv;
 
     rc = sqlite3_exec(db, query, callback_db, 0, &zErrMsg);
     if (rc != SQLITE_OK) {
