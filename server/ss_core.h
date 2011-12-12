@@ -12,6 +12,9 @@
 #define SS_REQ_ERR      0x07
 #define SS_REQ_DBG      0x08
 
+// this must match the variable from avr/ss.pde
+#define sleep_period    30
+
 typedef struct ss_request_s ss_request_t;
 typedef struct ss_connection_s ss_connection_t;
 

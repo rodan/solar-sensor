@@ -77,8 +77,15 @@ int ss_process_in_str(ss_connection_t * c)
                     snprintf(sql_q, H_MAX,
                              "select count(*) from sensors where date like '%d-%02d-%02d%%';",
                              t.tm_year + 1900, t.tm_mon + 1, t.tm_mday);
-                    if ((sql_exec_i(sql_q) != 48) && (retr < 52))
+
+                    if (day == 0) {
+                        if (sql_exec_i(sql_q) !=
+                            (int)(t.tm_hour * 60 + t.tm_min) / sleep_period + 1)
+                            download = 1;
+                    } else if ((sql_exec_i(sql_q) != 1440 / sleep_period)
+                               && (retr < 1440 / sleep_period + 8)) {
                         download = 1;
+                    }
                 }
 
                 if (download == 1) {
