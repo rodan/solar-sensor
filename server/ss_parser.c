@@ -279,7 +279,7 @@ int ss_get_read(ss_connection_t * reply)
             if (read(reply->fd_dev, &buff, 1) == 1) {
                 if (buff == 4 || buff == 13) {; // 4 is used for keepalives - ignore
                 } else if (buff == 10 && i == 0) {;     // \n and nothing else - ignore
-                } else if (buff == 10 && i > 2) {       // string_i_chars_long\n
+                } else if (buff == 10 && i > 1) {       // string_i_chars_long\n
                     reply->r.in_str.len = i;
                     switch (ss_process_get_str(reply)) {
                     case 1:

@@ -26,4 +26,10 @@ void parse_cmd(char *cmd, uint8_t cmdsize);
 void console_send_ok();
 void console_send_err();
 
+void wireless_on();
+void wireless_off();
+
+void led_on();
+void led_off();
+
 #endif

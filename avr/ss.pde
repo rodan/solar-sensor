@@ -16,6 +16,8 @@
 #define pin_SHT_SCK 5
 #define pin_log_rx 6
 #define pin_log_tx 7
+#define pin_wireless_hib 12
+#define pin_led 13
 
 // analog pins
 // rtc uses A5 for SCL and A4 for SDA
@@ -33,7 +35,7 @@ unsigned char sleep_period = 30;
 
 // initial wait, warmup, counter, hum, post wait, sleep
 unsigned long stage_timing[7] =
-    { 5000, 1000, 60000, 1000, 20000, 80000, (sleep_period * 60000) - 168000 };
+    { 5000, 1000, 60000, 1000, 20000, 5000, (sleep_period * 60000) - 108000 };
 unsigned long stage_prev = 0;
 boolean stage_started[7] = { false, false, false, false, false, false, false };
 
@@ -62,13 +64,10 @@ float int_temp;
 // serial console
 char recv[BUFF_MAX];
 uint8_t recv_size = 0;
-// keepalive
-unsigned long ka_interval = 5000;
-unsigned long ka_prev = 0;
 
 // shut down is here is no server interaction
 unsigned long shtd_interval = 20000;
-unsigned long shtd_prev = 4294967295UL;
+unsigned long shtd_prev = 0;
 
 // openlog
 #define BUFF_LOG 64
@@ -99,6 +98,8 @@ void setup()
     pinMode(pin_counter, INPUT);
     pinMode(pin_log_rx, INPUT);
     pinMode(pin_log_tx, OUTPUT);
+    //pinMode(pin_led, OUTPUT);
+    pinMode(pin_wireless_hib, OUTPUT);
 
     // verify if Alarm2 woked us up  ( XXXX XX1X )
     if ((DS3231_get_sreg() & 0x02) == 0) {
@@ -119,6 +120,8 @@ void setup()
     DS3231_get(&t);
     snprintf(day_prev, 3, "%d", t.mday);
 
+    wireless_off();
+    //led_off();
     openlog_open_file();
     irrecv.enableIRIn();
 
@@ -130,12 +133,6 @@ void loop()
 
     ir_decode();
     console_decode();
-
-    if (now - ka_prev > ka_interval) {
-        // ping to keep the xbees awake
-        Serial.print(4, BYTE);
-        ka_prev = now;
-    }
 
     if (op_mode == OP_AUTOMATIC) {
         switch (stage_num) {
@@ -181,7 +178,7 @@ void loop()
             }
             break;
         case 5:
-            if (!stage_started[6] && ((now - stage_prev > stage_timing[5]) || (now - shtd_prev > shtd_interval) )) {
+            if (!stage_started[6] && ((now - stage_prev > stage_timing[5]) && (now - shtd_prev > shtd_interval) )) {
                 stage_prev = now;
                 stage_started[5] = false;
                 stage_started[6] = true;
@@ -407,6 +404,7 @@ void stage3()
 
 //  counter_cpm = ( counter_c - counter_c_last ) * 60000.0 / counter_interval;
     counter_cpm = counter_c - counter_c_last;
+    wireless_on();
 }
 
 void stage4()
@@ -414,6 +412,8 @@ void stage4()
     stage_num = 4;
     //debug_status = "s4 save";
     char day_now[3];
+
+    //led_on();
 
     measure_ext();
     measure_int();
@@ -452,6 +452,9 @@ void stage6()
 {
     stage_num = 6;
     //debug_status = "s6 sleep";
+
+    wireless_off();
+    //led_off();
 
     // set Alarm2 to wake up the device
     unsigned char wakeup_min;
@@ -592,6 +595,26 @@ void console_send_err()
     Serial.println("ERR");
 }
 
+void wireless_on()
+{
+    digitalWrite(pin_wireless_hib, LOW);
+    delay(14);
+}
+
+void wireless_off()
+{
+    digitalWrite(pin_wireless_hib, HIGH);
+}
+
+void led_on()
+{
+    digitalWrite(pin_led, HIGH);
+}
+
+void led_off()
+{
+    digitalWrite(pin_led, LOW);
+}
 
 //   OpenLog related
 
