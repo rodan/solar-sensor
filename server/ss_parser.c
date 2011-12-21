@@ -108,6 +108,11 @@ int ss_process_in_str(ss_connection_t * c)
 
                 }
             }
+
+            snprintf(c->r.out_str.str, H_MAX, "HALT\n");
+            c->r.out_str.len = 5;
+            ss_process_out(c);
+
         } else if (c->r.method == SS_REQ_UNKNOWN) {;
             //fprintf(stdout,"%s\n",c->r.in_str.str);
             //ss_log("b__%s__e",c->r.in_str.str,c->r.in_str.len);

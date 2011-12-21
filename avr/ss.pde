@@ -568,6 +568,13 @@ void parse_cmd(char *cmd, uint8_t cmdsize)
                 console_send_err();
             }
         }
+    } else if (cmd[0] == 72) {
+        if (strncmp(cmd, "HALT", 4) == 0) {
+            // go' sleep some
+            stage_started[5] = false;
+            stage_started[6] = true;
+            stage6();
+        }
     } else if ((cmd[0] == 84) && (cmdsize == 16)) {
         //T355720619112011
         t.sec = inp2toi(cmd, 1);
