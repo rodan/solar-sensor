@@ -1,4 +1,36 @@
 
+/*
+
+  Solar sensor program that implements the following:
+
+   - read temperature, humidity and geiger counter sensors
+   - read and set alarms in the real time clock
+   - log sensor data on an openlog module
+   - use a communication protocol to send data to a server
+
+  see the README file for more info.
+
+  Author:          Petre Rodan <petre.rodan@simplex.ro>
+  Available from:  https://github.com/rodan/solar-sensor
+  License:         GNU GPLv3
+
+  GNU GPLv3 license:
+  
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+   
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+   
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+   
+*/
+
 #include <SoftwareSerial.h>
 #include <IRremote.h>
 #include <Sensirion.h>
@@ -634,19 +666,19 @@ void openlog_open_file()
     snprintf(fname, 9, "%d%02d%02d", t.year, t.mon, t.mday);
 
     delay(wait);
-    logger.print(26, BYTE);
-    logger.print(26, BYTE);
-    logger.print(26, BYTE);
+    logger.write(26);
+    logger.write(26);
+    logger.write(26);
     // just in case we were already in command mode
-    logger.print(13, BYTE);
+    logger.write(13);
     delay(wait);
     logger.print("new ");
     logger.print(fname);
-    logger.print(13, BYTE);
+    logger.write(13);
     delay(wait);
     logger.print("append ");
     logger.print(fname);
-    logger.print(13, BYTE);
+    logger.write(13);
     delay(wait);
 }
 
@@ -658,11 +690,11 @@ unsigned int openlog_read_file(char fname[40], unsigned int offset,
     int wait = 50;
 
     delay(wait);
-    logger.print(26, BYTE);
-    logger.print(26, BYTE);
-    logger.print(26, BYTE);
+    logger.write(26);
+    logger.write(26);
+    logger.write(26);
     // just in case we were already in command mode
-    logger.print(13, BYTE);
+    logger.write(13);
     delay(wait);
     logger.print("read ");
     logger.print(fname);
@@ -672,7 +704,7 @@ unsigned int openlog_read_file(char fname[40], unsigned int offset,
     logger.print(len);
     logger.flush();
     //Now send the enter command to OpenLog to actually initiate the read command
-    logger.print(13, BYTE);
+    logger.write(13);
     delay(wait);
 
     buff[0] = 0;
@@ -713,17 +745,17 @@ unsigned int openlog_get_fsize(char fname[40])
     char in;
 
     delay(wait);
-    logger.print(26, BYTE);
-    logger.print(26, BYTE);
-    logger.print(26, BYTE);
+    logger.write(26);
+    logger.write(26);
+    logger.write(26);
     // just in case we were already in command mode
-    logger.print(13, BYTE);
+    logger.write(13);
     delay(wait);
     logger.print("size ");
     logger.print(fname);
     logger.flush();
     //Now send the enter command to OpenLog to actually initiate the read command
-    logger.print(13, BYTE);
+    logger.write(13);
     delay(wait);
 
     while (logger.available() > 0) {
