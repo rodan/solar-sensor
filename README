@@ -6,14 +6,24 @@
    - log sensor data on an OpenLog module
    - use a communication protocol to send data to a PC
 
-  server side software available at https://github.com/rodan/solar-sensor/tree/master/server
+  there are 3 components in this repository:
+  avr       - contains the Arduino code for the microcontroller
+  hardware  - open source hardware for the main board
+  server    - server-side implementation of the comm protocol
 
 
-  Library dependencies:
+  Library dependencies for the avr:
 
   ds3231      https://github.com/rodan/ds3231
   IRremote    http://www.arcfn.com/2009/08/multi-protocol-infrared-remote-library.html
   Sensirion   http://www.arduino.cc/playground/Code/Sensirion
+
+
+  dependencies for the server-side software:
+
+  linux with working ftdi kernel driver
+  sqlite      http://www.sqlite.org/
+  gnuplot     http://www.gnuplot.info/
 
 
   Hardware needed:
@@ -33,23 +43,13 @@
 
   How does it work
 
-    Power: the main power is from a 2Ah LiPo cell that is charged from the solar panel.
-    a stabilization circuit and a boost give out 3.3V and 5V respectively. a small coin
-    cell battery keeps the DS3231 RTC chip working at all times. the RTC's alarm function
-    is waking up the microcontroller and the sensors via a solid state relay once every 30 
-    minutes.
+    Power: the main power is from a 2Ah LiPo cell that is charged from the solar panel. a stabilization circuit and a boost give out 3.3V and 5V respectively. a small coin cell battery keeps the DS3231 RTC chip working at all times. the RTC's alarm function is waking up the microcontroller and the sensors via a solid state relay once every 30 minutes.
 
-    Sensors: some are internal and some kept outside. The outside temperature and humidity
-    are measured by a SHT15 chip. the Geiger-Muller tube is also kept outside. the internal 
-    temperature is read from the RTC chip.
+    Sensors: some are internal and some kept outside. The outside temperature and humidity are measured by a SHT15 chip. the Geiger-Muller tube is also kept outside. the internal temperature is read from the RTC chip.
 
-    Sensor data: is saved to a uSD card (on an OpenLog module) and if the receiving PC is up 
-    and if the wireless signal haven't got too much interference than a protocol is used to 
-    send new data to the PC. in the end it is being rendered here: 
-     http://www.simplex.ro/ro/statie_meteo.html
+    Sensor data: is saved to a uSD card (on an OpenLog module) and if the receiving PC is up and if the wireless signal haven't got too much interference than a protocol is used to send new data to the PC. in the end it is being rendered here: http://www.simplex.ro/ro/statie_meteo.html
 
-    Commands: are being given either via the wireless serial interface or via a universal 
-    remote control that can speak RC5 (most remotes can).
+    Commands: are being given either via the wireless serial interface or via a universal remote control that can speak RC5 (most remotes can).
 
 
   Author:          Petre Rodan <petre.rodan@simplex.ro>
