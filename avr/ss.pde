@@ -5,13 +5,13 @@
 
    - read temperature, humidity and geiger counter sensors
    - read and set alarms in the real time clock
-   - log sensor data on an openlog module
+   - log sensor data on an microSD card
    - use a communication protocol to send data to a server
 
   see the README file for more info.
 
   Author:          Petre Rodan <petre.rodan@simplex.ro>
-  Version:         rev 03
+  Revision:        03
   Available from:  https://github.com/rodan/solar-sensor
   License:         GNU GPLv3
 
@@ -37,6 +37,9 @@
 #include <Sensirion.h>
 #include <Wire.h>
 #include <ds3231.h>
+#include <SPI.h>
+#include <SdFat.h>
+#include <SdFatUtil.h>
 
 #include "ss.h"
 
@@ -49,12 +52,11 @@
 #define pin_SHT_SCK 5
 #define pin_log_rx 6
 #define pin_log_tx 7
-#define pin_wireless_hib 12
-#define pin_led 13
 
 // analog pins
 // rtc uses A5 for SCL and A4 for SDA
-#define pin_light 3
+#define pin_wireless_hib A2
+#define pin_light A3
 
 // OP_AUTOMATIC - when the device is woken up by the RTC
 // OP_MANUAL - when the device is woken up by a human
@@ -102,10 +104,10 @@ uint8_t recv_size = 0;
 unsigned long shtd_interval = 20000;
 unsigned long shtd_prev = 0;
 
-// openlog
+// uSD
 #define BUFF_LOG 64
-SoftwareSerial logger(pin_log_rx, pin_log_tx);
-char day_prev[3];
+SdFat sd;
+SdFile f;
 
 // infrared remote
 IRrecv irrecv(pin_ir);
@@ -131,33 +133,28 @@ void setup()
     pinMode(pin_counter, INPUT);
     pinMode(pin_log_rx, INPUT);
     pinMode(pin_log_tx, OUTPUT);
-    //pinMode(pin_led, OUTPUT);
     pinMode(pin_wireless_hib, OUTPUT);
 
-    // verify if Alarm2 woked us up  ( XXXX XX1X )
+    // verify if Alarm2 woked us up  ( status register XXXX XX1X )
     if ((DS3231_get_sreg() & 0x02) == 0) {
         // powered up by manual switch, not by alarm
         op_mode = OP_MANUAL;
-        measure_ext();
-        measure_int();
+        stage4();
+        setup_a2();
     }
 
     DS3231_init(0x06);
-
-    // the logger needs time to boot
-    delay(300);
-    logger.begin(9600);
     Serial.begin(9600);
 
-    // the day when the program was first started
-    DS3231_get(&t);
-    snprintf(day_prev, 3, "%d", t.mday);
+    // change to SPI_FULL_SPEED on proper PCB setup
+    if (!sd.init(SPI_HALF_SPEED)) sd.initErrorHalt();
 
     wireless_off();
     //led_off();
-    openlog_open_file();
     irrecv.enableIRIn();
-
+    //Serial.print("ram ");
+    //Serial.println(FreeRam());
+    //Serial.println("?");
 }
 
 void loop()
@@ -442,9 +439,10 @@ void stage3()
 
 void stage4()
 {
+    char f_name[9];
+    char tmp1[7], tmp2[7], tmp3[7], tmp4[7];
     stage_num = 4;
     //debug_status = "s4 save";
-    char day_now[3];
 
     //led_on();
 
@@ -452,22 +450,21 @@ void stage4()
     measure_int();
 
     DS3231_get(&t);
-    snprintf(day_now, 3, "%d", t.mday);
-
-    if (strncmp(day_now, day_prev, 2) != 0) {
-        openlog_open_file();
-        strncpy(day_prev, day_now, 3);
-    }
-
-    char tmp1[7], tmp2[7], tmp3[7], tmp4[7];
 
     snprintf(output, BUFF_OUT,
-             "%d-%02d-%02dT%02d:%02d:%02d %sC %s%% %sC %dL %sC %dcpm", t.year,
+             "%d-%02d-%02dT%02d:%02d:%02d %sC %s%% %sC %dL %sC %dcpm\r\n", t.year,
              t.mon, t.mday, t.hour, t.min, t.sec, dtostrf(ext_temp, 2, 2, tmp1),
              dtostrf(ext_hum, 2, 2, tmp2), dtostrf(ext_dew, 2, 2, tmp3),
              ext_light, dtostrf(int_temp, 2, 2, tmp4), counter_cpm);
 
-    logger.println(output);
+    if ( op_mode == OP_AUTOMATIC ) {
+        snprintf(f_name, 9, "%d%02d%02d", t.year, t.mon, t.mday);
+        f.open(f_name, O_RDWR | O_CREAT | O_AT_END);
+        if (f.write(output, sizeof(output)) != sizeof(output)) {
+            //error("write failed");
+        }
+        f.close();
+    }
 }
 
 void stage5()
@@ -487,9 +484,18 @@ void stage6()
     //debug_status = "s6 sleep";
 
     wireless_off();
-    //led_off();
 
-    // set Alarm2 to wake up the device
+    setup_a2();
+
+    // clear all alarms and thus go to sleep
+    DS3231_set_sreg(0x00);
+    //system_sleep();
+
+}
+
+// set Alarm2 to wake up the device
+void setup_a2()
+{
     unsigned char wakeup_min;
     DS3231_get(&t);
     wakeup_min = (t.min / sleep_period + 1) * sleep_period;
@@ -503,11 +509,6 @@ void stage6()
 
     // activate Alarm2
     DS3231_init(0x06);
-
-    // clear all alarms and thus go to sleep
-    DS3231_set_sreg(0x00);
-    //system_sleep();
-
 }
 
 //   console related
@@ -546,11 +547,11 @@ void parse_cmd(char *cmd, uint8_t cmdsize)
 {
     char f_c[BUFF_LOG];
     int i;
-    int rrv = 1;
+    int rrv = BUFF_LOG;
     char f_name[9];
-    unsigned int f_pos = 0;
+    //unsigned int f_pos = 0;
     unsigned int f_size;
-    unsigned int f_buffsize = BUFF_LOG;
+    //unsigned int f_buffsize = BUFF_LOG;
 
 /*     
     Serial.print("DBG cmd='");
@@ -576,23 +577,17 @@ void parse_cmd(char *cmd, uint8_t cmdsize)
             Serial.println(output);
             console_send_ok();
         } else {
-            f_size = openlog_get_fsize(f_name);
+            f.open(f_name, O_READ);
+            f_size = f.fileSize();
             Serial.print("LEN ");
             Serial.print(f_name);
             Serial.print(" ");
             Serial.println(f_size);
 
-            if (f_size > 2) {
-                while (f_buffsize > 1) {
-                    rrv = openlog_read_file(f_name, f_pos, f_buffsize, &f_c[0]);
-                    f_pos = f_pos + rrv;
-                    if (f_pos + BUFF_LOG > f_size)
-                        f_buffsize = f_size - f_pos;
-
+            if (f_size > 0) {
+                while (rrv == BUFF_LOG) {
+                    rrv = f.read(&f_c[0], BUFF_LOG);
                     for (i = 0; i < rrv; i++) {
-                        // 0x1a (26) is ^Z - used as control char
-                        // but openlog's read file translates it to 46 !??!
-                        //if (f_c[i] != 26)
                         Serial.print(f_c[i]);
                     }
                 }
@@ -600,6 +595,8 @@ void parse_cmd(char *cmd, uint8_t cmdsize)
             } else {
                 console_send_err();
             }
+
+            f.close();
         }
     } else if (cmd[0] == 72) {
         if (strncmp(cmd, "HALT", 4) == 0) {
@@ -646,124 +643,16 @@ void wireless_off()
     digitalWrite(pin_wireless_hib, HIGH);
 }
 
-void led_on()
+/*
+int open_file(char fname[10])
 {
-    digitalWrite(pin_led, HIGH);
+    //int wait = 200;
+    //char fname[9];
+
+    //DS3231_get(&t);
+    //snprintf(fname, 9, "%d%02d%02d", t.year, t.mon, t.mday);
+
+    // open the file for write at end like the Native SD library
+    return f.open(fname, O_RDWR | O_CREAT | O_AT_END);
 }
-
-void led_off()
-{
-    digitalWrite(pin_led, LOW);
-}
-
-//   OpenLog related
-
-void openlog_open_file()
-{
-    int wait = 200;
-    char fname[9];
-
-    DS3231_get(&t);
-    snprintf(fname, 9, "%d%02d%02d", t.year, t.mon, t.mday);
-
-    delay(wait);
-    logger.write(26);
-    logger.write(26);
-    logger.write(26);
-    // just in case we were already in command mode
-    logger.write(13);
-    delay(wait);
-    logger.print("new ");
-    logger.print(fname);
-    logger.write(13);
-    delay(wait);
-    logger.print("append ");
-    logger.print(fname);
-    logger.write(13);
-    delay(wait);
-}
-
-unsigned int openlog_read_file(char fname[40], unsigned int offset,
-                               unsigned int len, char *buff)
-{
-    unsigned int rv;
-    char in;
-    int wait = 50;
-
-    delay(wait);
-    logger.write(26);
-    logger.write(26);
-    logger.write(26);
-    // just in case we were already in command mode
-    logger.write(13);
-    delay(wait);
-    logger.print("read ");
-    logger.print(fname);
-    logger.print(" ");
-    logger.print(offset);
-    logger.print(" ");
-    logger.print(len);
-    logger.flush();
-    //Now send the enter command to OpenLog to actually initiate the read command
-    logger.write(13);
-    delay(wait);
-
-    buff[0] = 0;
-    rv = 0;
-
-    while (logger.available() > 0 && rv < len) {
-
-/*    
-        // openlog v1 has this problem
-        if ( rv == 2 ) {
-            // a stupid 13 10 creeps in here
-            if ( buff[0] == 13 && buff[1] == 10 )
-                rv = 0;
-        }
 */
-        // openlog v2 has this other problem
-        if (rv == 3) {
-            // a stupid 13 10 creeps in here
-            if (buff[0] == 13 && buff[1] == 13 && buff[2] == 10)
-                rv = 0;
-        }
-
-        in = logger.read();
-        // someone transforms /n into /r/n
-        //if (in != 13) {
-        buff[rv] = in;
-        rv++;
-        //}
-    }
-
-    return rv;
-}
-
-unsigned int openlog_get_fsize(char fname[40])
-{
-    unsigned int rv = 0;
-    int wait = 200;
-    char in;
-
-    delay(wait);
-    logger.write(26);
-    logger.write(26);
-    logger.write(26);
-    // just in case we were already in command mode
-    logger.write(13);
-    delay(wait);
-    logger.print("size ");
-    logger.print(fname);
-    logger.flush();
-    //Now send the enter command to OpenLog to actually initiate the read command
-    logger.write(13);
-    delay(wait);
-
-    while (logger.available() > 0) {
-        in = logger.read();
-        if (in > 47 && in < 59)
-            rv = (rv * 10) + in - 48;
-    }
-
-    return rv;
-}

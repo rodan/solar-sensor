@@ -14,10 +14,6 @@ void stage4();
 void stage5();
 void stage6();
 
-void openlog_open_file();
-unsigned int openlog_read_file(char fname[40], unsigned int offset, unsigned int len, char *buff);
-unsigned int openlog_get_fsize(char fname[40]);
-
 void ir_decode();
 
 void console_decode();
@@ -29,7 +25,6 @@ void console_send_err();
 void wireless_on();
 void wireless_off();
 
-void led_on();
-void led_off();
+void setup_a2();
 
 #endif
