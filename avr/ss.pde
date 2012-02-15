@@ -50,8 +50,6 @@
 #define pin_counter 3
 #define pin_SHT_DATA 4
 #define pin_SHT_SCK 5
-#define pin_log_rx 6
-#define pin_log_tx 7
 
 // analog pins
 // rtc uses A5 for SCL and A4 for SDA
@@ -131,8 +129,6 @@ char output[BUFF_OUT];
 void setup()
 {
     pinMode(pin_counter, INPUT);
-    pinMode(pin_log_rx, INPUT);
-    pinMode(pin_log_tx, OUTPUT);
     pinMode(pin_wireless_hib, OUTPUT);
 
     // verify if Alarm2 woked us up  ( status register XXXX XX1X )
