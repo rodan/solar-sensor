@@ -22,8 +22,8 @@ void parse_cmd(char *cmd, uint8_t cmdsize);
 void console_send_ok();
 void console_send_err();
 
-void wireless_on();
-void wireless_off();
+void xbee_on();
+void xbee_off();
 
 void setup_a2();
 
