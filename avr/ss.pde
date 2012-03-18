@@ -45,6 +45,20 @@
 
 #define SENSOR_ID "EHLO s1"
 
+// XBEE_ACTIVE_LOW must be 1 with the following jumper settings:
+//   J2 set, J3 open, J4 set, J5 open 
+//            (xbee always receives power, hibernating if ATSM1 set - this is the default state)
+//   J2 set, J3 open, J4 open, J5 set 
+//            (xbee always receives power, always active if ATSM1 set) 
+//
+// XBEE_ACTIVE_LOW must be 0 with the following jumper settings:
+//   J2 open, J3 set, J4 open, J5 set
+//            (xbee receives power only when pin_xbee_ctrl is HIGH)
+//
+
+#define XBEE_ACTIVE_LOW "1"
+
+
 // arduino digital pins
 #define pin_ir 2
 #define pin_counter 3
@@ -53,7 +67,7 @@
 
 // analog pins
 // rtc uses A5 for SCL and A4 for SDA
-#define pin_wireless_hib A2
+#define pin_xbee_ctrl A2
 #define pin_light A3
 
 // OP_AUTOMATIC - when the device is woken up by the RTC
@@ -129,7 +143,7 @@ char output[BUFF_OUT];
 void setup()
 {
     pinMode(pin_counter, INPUT);
-    pinMode(pin_wireless_hib, OUTPUT);
+    pinMode(pin_xbee_ctrl, OUTPUT);
 
     // verify if Alarm2 woked us up  ( status register XXXX XX1X )
     if ((DS3231_get_sreg() & 0x02) == 0) {
@@ -145,7 +159,7 @@ void setup()
     // change to SPI_FULL_SPEED on proper PCB setup
     if (!sd.init(SPI_HALF_SPEED)) sd.initErrorHalt();
 
-    wireless_off();
+    xbee_off();
     //led_off();
     irrecv.enableIRIn();
     //Serial.print("ram ");
@@ -430,7 +444,7 @@ void stage3()
 
 //  counter_cpm = ( counter_c - counter_c_last ) * 60000.0 / counter_interval;
     counter_cpm = counter_c - counter_c_last;
-    wireless_on();
+    xbee_on();
 }
 
 void stage4()
@@ -479,7 +493,7 @@ void stage6()
     stage_num = 6;
     //debug_status = "s6 sleep";
 
-    wireless_off();
+    xbee_off();
 
     setup_a2();
 
@@ -628,15 +642,23 @@ void console_send_err()
     Serial.println("ERR");
 }
 
-void wireless_on()
+void xbee_on()
 {
-    digitalWrite(pin_wireless_hib, LOW);
+    if (XBEE_ACTIVE_LOW) {
+        digitalWrite(pin_xbee_ctrl, LOW);
+    } else {
+        digitalWrite(pin_xbee_ctrl, HIGH);
+    }
     delay(14);
 }
 
-void wireless_off()
+void xbee_off()
 {
-    digitalWrite(pin_wireless_hib, HIGH);
+    if (XBEE_ACTIVE_LOW) {
+        digitalWrite(pin_xbee_ctrl, HIGH);
+    } else {
+        digitalWrite(pin_xbee_ctrl, LOW);
+    }
 }
 
 /*

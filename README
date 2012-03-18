@@ -1,5 +1,5 @@
 
-  Solar sensor program that implements the following:
+  Solar sensor device that implements the following:
 
    - read temperature, humidity and geiger counter sensors
    - read and set alarms in the real time clock
@@ -12,7 +12,7 @@
   server    - server-side implementation of the comm protocol
 
 
-  Library dependencies for the avr:
+  Library dependencies for the included avr software:
 
   ds3231      https://github.com/rodan/ds3231
   IRremote    http://www.arcfn.com/2009/08/multi-protocol-infrared-remote-library.html
@@ -35,15 +35,16 @@
   XBee 2mW Chip Antenna - Series 2 ZigBee (2 pcs)  - sparkfun sku: WRL-10415
   XBee Explorer USB  - sparkfun sku: WRL-08687
   main board that includes the LiPo charger, DS3231 to wake up the system, 
-    5v boost, logic level converter, 3.3v stabilized source
-    atmega328p uC, uSD card socket
+    5v boost, one logic level converter, 3.3v stabilized sources, atmega328p uC, 
+    uSD card socket, xbee socket, digital cold junction compensated K-type 
+    thermocouple IC and mosfets used to power off unused modules.
 
 
   How does it work
 
-    Power: the main power is from a 2Ah LiPo cell that is charged from the solar panel. a stabilization circuit and a boost give out 3.3V and 5V respectively. a small coin cell battery keeps the DS3231 RTC chip working at all times. the RTC's alarm function is waking up the microcontroller and the sensors via a mosfet once every 30 minutes.
+    Power: the main power is from a 2Ah LiPo cell that is charged from the solar panel. a stabilization circuit and a boost give out 3.3V and 5V respectively. a small coin cell battery keeps the DS3231 RTC chip working at all times. the RTC's alarm function is waking up the microcontroller once every 30 minutes.
 
-    Sensors: some are internal and some kept outside. The outside temperature and humidity are measured by a SHT15 chip. the Geiger-Muller tube is also kept outside. the internal temperature is read from the RTC chip.
+    Sensors: some are internal and some kept outside. The outside temperature and humidity are measured by a SHT15 chip. the Geiger-Muller tube is also kept outside. the internal temperature is read from the RTC chip, or via a K-type thermocouple.
 
     Sensor data: is saved to a uSD card and if the receiving PC is up and if the wireless signal haven't got too much interference than a protocol is used to send new data to the PC. it ends up here: http://www.simplex.ro/ro/statie_meteo.html
 
