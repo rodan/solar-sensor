@@ -60,15 +60,17 @@
 
 
 // arduino digital pins
-#define pin_ir 2
-#define pin_counter 3
-#define pin_SHT_DATA 4
-#define pin_SHT_SCK 5
+#define pin_counter 2
+#define pin_ir 3
+#define pin_boost_sw 4
+#define pin_SHT_DATA 7
+#define pin_SHT_SCK 8
 
 // analog pins
-// rtc uses A5 for SCL and A4 for SDA
 #define pin_xbee_ctrl A2
 #define pin_light A3
+//SDA   A4
+//SCL   A5
 
 // OP_AUTOMATIC - when the device is woken up by the RTC
 // OP_MANUAL - when the device is woken up by a human
@@ -160,7 +162,6 @@ void setup()
     if (!sd.init(SPI_HALF_SPEED)) sd.initErrorHalt();
 
     xbee_off();
-    //led_off();
     irrecv.enableIRIn();
     //Serial.print("ram ");
     //Serial.println(FreeRam());
@@ -453,8 +454,6 @@ void stage4()
     char tmp1[7], tmp2[7], tmp3[7], tmp4[7];
     stage_num = 4;
     //debug_status = "s4 save";
-
-    //led_on();
 
     measure_ext();
     measure_int();
