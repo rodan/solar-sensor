@@ -24,6 +24,8 @@ void console_send_err();
 
 void xbee_on();
 void xbee_off();
+void boost_on();
+void boost_off();
 
 void setup_a2();
 

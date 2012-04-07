@@ -55,9 +55,7 @@
 //   J2 open, J3 set, J4 open, J5 set
 //            (xbee receives power only when pin_xbee_ctrl is HIGH)
 //
-
 #define XBEE_ACTIVE_LOW "1"
-
 
 // arduino digital pins
 #define pin_counter 2
@@ -65,6 +63,7 @@
 #define pin_boost_sw 4
 #define pin_SHT_DATA 7
 #define pin_SHT_SCK 8
+#define pin_cs_kterm 9
 
 // analog pins
 #define pin_xbee_ctrl A2
@@ -84,7 +83,7 @@ unsigned char sleep_period = 30;
 
 // initial wait, warmup, counter, hum, post wait, sleep
 unsigned long stage_timing[7] =
-    { 5000, 1000, 60000, 1000, 20000, 5000, (sleep_period * 60000) - 108000 };
+    { 2000, 4000, 60000, 1000, 20000, 5000, (sleep_period * 60000) - 108000 };
 unsigned long stage_prev = 0;
 boolean stage_started[7] = { false, false, false, false, false, false, false };
 
@@ -146,6 +145,11 @@ void setup()
 {
     pinMode(pin_counter, INPUT);
     pinMode(pin_xbee_ctrl, OUTPUT);
+    pinMode(pin_cs_kterm, OUTPUT);
+    pinMode(pin_boost_sw, OUTPUT);
+
+    digitalWrite(pin_cs_kterm, HIGH);
+    xbee_off();
 
     // verify if Alarm2 woked us up  ( status register XXXX XX1X )
     if ((DS3231_get_sreg() & 0x02) == 0) {
@@ -159,9 +163,9 @@ void setup()
     Serial.begin(9600);
 
     // change to SPI_FULL_SPEED on proper PCB setup
-    if (!sd.init(SPI_HALF_SPEED)) sd.initErrorHalt();
+    //if (!sd.init(SPI_HALF_SPEED)) sd.initErrorHalt();
+    if (!sd.init(SPI_FULL_SPEED)) sd.initErrorHalt();
 
-    xbee_off();
     irrecv.enableIRIn();
     //Serial.print("ram ");
     //Serial.println(FreeRam());
@@ -367,11 +371,15 @@ void ir_decode()
         case 36:               // record
             Serial.println("GET time");
             break;
-/*
         case 54: // stop
+            xbee_off();
+            boost_off();
             break;
         case 14: // play
+            xbee_on();
+            boost_on();
             break;
+/*
         case 31: // pause
             break;
         case 35: // rew
@@ -428,6 +436,8 @@ void stage1()
 {
     stage_num = 1;
     //debug_status = "s1 warmup";
+
+    boost_on();
 }
 
 void stage2()
@@ -445,6 +455,7 @@ void stage3()
 
 //  counter_cpm = ( counter_c - counter_c_last ) * 60000.0 / counter_interval;
     counter_cpm = counter_c - counter_c_last;
+    boost_off();
     xbee_on();
 }
 
@@ -469,9 +480,10 @@ void stage4()
     if ( op_mode == OP_AUTOMATIC ) {
         snprintf(f_name, 9, "%d%02d%02d", t.year, t.mon, t.mday);
         f.open(f_name, O_RDWR | O_CREAT | O_AT_END);
-        if (f.write(output, sizeof(output)) != sizeof(output)) {
+        f.write(output, strlen(output));
+        //if (f.write(output, strlen(output)) != strlen(output)) {
             //error("write failed");
-        }
+        //}
         f.close();
     }
 }
@@ -639,6 +651,16 @@ void console_send_ok()
 void console_send_err()
 {
     Serial.println("ERR");
+}
+
+void boost_on()
+{
+    digitalWrite(pin_boost_sw, HIGH);
+}
+
+void boost_off()
+{
+    digitalWrite(pin_boost_sw, LOW);
 }
 
 void xbee_on()
