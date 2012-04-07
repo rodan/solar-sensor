@@ -22344,6 +22344,8 @@ body 3.9 mm/JEDEC MS-012AA</description>
 <part name="GND12" library="SparkFun" deviceset="GND" device=""/>
 <part name="R18" library="rcl" deviceset="R-EU_" device="R0805W" value="100k"/>
 <part name="SJ2" library="jumper" deviceset="SJ" device="" value="J2"/>
+<part name="+3V9" library="supply1" deviceset="+3V3" device=""/>
+<part name="R1" library="rcl" deviceset="R-EU_" device="R0805W" value="100K"/>
 </parts>
 <sheets>
 <sheet>
@@ -22517,6 +22519,8 @@ body 3.9 mm/JEDEC MS-012AA</description>
 <instance part="GND12" gate="1" x="0" y="101.6"/>
 <instance part="R18" gate="G$1" x="0" y="129.54" rot="R270"/>
 <instance part="SJ2" gate="1" x="30.48" y="127" rot="R90"/>
+<instance part="+3V9" gate="G$1" x="233.68" y="99.06"/>
+<instance part="R1" gate="G$1" x="223.52" y="91.44"/>
 </instances>
 <busses>
 </busses>
@@ -23197,6 +23201,12 @@ body 3.9 mm/JEDEC MS-012AA</description>
 <wire x1="149.86" y1="210.82" x2="149.86" y2="215.9" width="0.1524" layer="91"/>
 <junction x="149.86" y="210.82"/>
 </segment>
+<segment>
+<pinref part="+3V9" gate="G$1" pin="+3V3"/>
+<wire x1="233.68" y1="91.44" x2="233.68" y2="96.52" width="0.1524" layer="91"/>
+<pinref part="R1" gate="G$1" pin="2"/>
+<wire x1="228.6" y1="91.44" x2="233.68" y2="91.44" width="0.1524" layer="91"/>
+</segment>
 </net>
 <net name="+5V" class="0">
 <segment>
@@ -23366,8 +23376,8 @@ body 3.9 mm/JEDEC MS-012AA</description>
 </segment>
 <segment>
 <pinref part="U5" gate="G$1" pin="PD4(XCK/T0)"/>
-<wire x1="208.28" y1="106.68" x2="215.9" y2="106.68" width="0.1524" layer="91"/>
 <label x="210.82" y="106.68" size="1.778" layer="95"/>
+<wire x1="208.28" y1="106.68" x2="215.9" y2="106.68" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="SCK" class="0">
@@ -23603,8 +23613,9 @@ body 3.9 mm/JEDEC MS-012AA</description>
 <net name="D9" class="0">
 <segment>
 <pinref part="U5" gate="G$1" pin="PB1(OC1A)"/>
-<wire x1="208.28" y1="91.44" x2="215.9" y2="91.44" width="0.1524" layer="91"/>
+<wire x1="208.28" y1="91.44" x2="218.44" y2="91.44" width="0.1524" layer="91"/>
 <label x="210.82" y="91.44" size="1.778" layer="95"/>
+<pinref part="R1" gate="G$1" pin="1"/>
 </segment>
 <segment>
 <wire x1="299.72" y1="73.66" x2="294.64" y2="73.66" width="0.1524" layer="91"/>
@@ -23837,7 +23848,6 @@ body 3.9 mm/JEDEC MS-012AA</description>
 <approved hash="104,1,279.4,180.34,U$2,VDD,+3V3_XBEE,,,"/>
 <approved hash="202,1,279.4,170.18,U$2,RESET,,,,"/>
 <approved hash="202,1,320.04,170.18,U$2,RTS,,,,"/>
-<approved hash="106,1,64.77,161.29,PD,,,,,"/>
 </errors>
 </schematic>
 </drawing>
