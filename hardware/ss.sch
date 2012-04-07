@@ -22499,7 +22499,7 @@ body 3.9 mm/JEDEC MS-012AA</description>
 <instance part="C22" gate="G$1" x="149.86" y="205.74"/>
 <instance part="GND37" gate="1" x="149.86" y="190.5"/>
 <instance part="GND43" gate="1" x="203.2" y="190.5"/>
-<instance part="JP9" gate="G$1" x="205.74" y="210.82" rot="R180"/>
+<instance part="JP9" gate="G$1" x="215.9" y="210.82" rot="R180"/>
 <instance part="LED4" gate="G$1" x="274.32" y="167.64" rot="MR90"/>
 <instance part="JP5" gate="G$1" x="223.52" y="20.32" rot="R180"/>
 <instance part="LED2" gate="G$1" x="60.96" y="251.46" rot="MR270"/>
@@ -22888,6 +22888,13 @@ body 3.9 mm/JEDEC MS-012AA</description>
 <pinref part="GND43" gate="1" pin="GND"/>
 <wire x1="198.12" y1="198.12" x2="203.2" y2="198.12" width="0.1524" layer="91"/>
 <wire x1="203.2" y1="198.12" x2="203.2" y2="193.04" width="0.1524" layer="91"/>
+<pinref part="U$3" gate="G$1" pin="T-"/>
+<pinref part="JP9" gate="G$1" pin="2"/>
+<wire x1="208.28" y1="208.28" x2="203.2" y2="208.28" width="0.1524" layer="91"/>
+<wire x1="203.2" y1="208.28" x2="198.12" y2="208.28" width="0.1524" layer="91"/>
+<wire x1="203.2" y1="198.12" x2="203.2" y2="208.28" width="0.1524" layer="91"/>
+<junction x="203.2" y="198.12"/>
+<junction x="203.2" y="208.28"/>
 </segment>
 <segment>
 <pinref part="C22" gate="G$1" pin="2"/>
@@ -23759,12 +23766,7 @@ body 3.9 mm/JEDEC MS-012AA</description>
 <segment>
 <pinref part="U$3" gate="G$1" pin="T+"/>
 <pinref part="JP9" gate="G$1" pin="1"/>
-</segment>
-</net>
-<net name="N$30" class="0">
-<segment>
-<pinref part="U$3" gate="G$1" pin="T-"/>
-<pinref part="JP9" gate="G$1" pin="2"/>
+<wire x1="208.28" y1="210.82" x2="198.12" y2="210.82" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="A6" class="0">
@@ -23848,6 +23850,7 @@ body 3.9 mm/JEDEC MS-012AA</description>
 <approved hash="104,1,279.4,180.34,U$2,VDD,+3V3_XBEE,,,"/>
 <approved hash="202,1,279.4,170.18,U$2,RESET,,,,"/>
 <approved hash="202,1,320.04,170.18,U$2,RTS,,,,"/>
+<approved hash="106,1,69.85,224.79,PD,,,,,"/>
 </errors>
 </schematic>
 </drawing>
