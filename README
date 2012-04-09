@@ -2,6 +2,7 @@
   Solar sensor device that implements the following:
 
    - read temperature, humidity and geiger counter sensors
+   - read thermocouple temperature
    - read and set alarms in the real time clock
    - log sensor data on a microSD card
    - use a communication protocol to send data to a PC
@@ -15,9 +16,9 @@
   Library dependencies for the included avr software:
 
   ds3231      https://github.com/rodan/ds3231
-  IRremote    http://www.arcfn.com/2009/08/multi-protocol-infrared-remote-library.html
+  max6675     https://github.com/rodan/max6675
   Sensirion   http://www.arduino.cc/playground/Code/Sensirion
-
+  IRremote    http://www.arcfn.com/2009/08/multi-protocol-infrared-remote-library.html
 
   dependencies for the server-side software:
 
@@ -37,7 +38,7 @@
   main board that includes the LiPo charger, DS3231 to wake up the system, 
     5v boost, one logic level converter, 3.3v stabilized sources, atmega328p uC, 
     uSD card socket, xbee socket, digital cold junction compensated K-type 
-    thermocouple IC and mosfets used to power off unused modules.
+    thermocouple IC and mosfets to power off unused modules.
 
 
   How does it work

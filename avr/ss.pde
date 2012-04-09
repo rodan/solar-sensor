@@ -35,11 +35,13 @@
 #include <SoftwareSerial.h>
 #include <IRremote.h>
 #include <Sensirion.h>
+#include <max6675.h>
 #include <Wire.h>
 #include <ds3231.h>
 #include <SPI.h>
 #include <SdFat.h>
 #include <SdFatUtil.h>
+
 
 #include "ss.h"
 
@@ -105,6 +107,9 @@ float ext_hum = 0.0;
 float ext_dew = 0.0;
 uint8_t ext_light = 0;
 
+// Ktherm
+float kth_temp = 0.0;
+
 // rtc
 struct ts t;
 float int_temp;
@@ -145,26 +150,25 @@ void setup()
 {
     pinMode(pin_counter, INPUT);
     pinMode(pin_xbee_ctrl, OUTPUT);
-    pinMode(pin_cs_kterm, OUTPUT);
     pinMode(pin_boost_sw, OUTPUT);
 
-    digitalWrite(pin_cs_kterm, HIGH);
     xbee_off();
 
     // verify if Alarm2 woked us up  ( status register XXXX XX1X )
     if ((DS3231_get_sreg() & 0x02) == 0) {
         // powered up by manual switch, not by alarm
         op_mode = OP_MANUAL;
-        stage4();
+        //stage4();
         setup_a2();
     }
 
+    // this will pull up D9 - needed for the SD card SPI communication
+    tk_init(pin_cs_kterm);
+
+    if (!sd.init(SPI_HALF_SPEED)) sd.initErrorHalt();
+
     DS3231_init(0x06);
     Serial.begin(9600);
-
-    // change to SPI_FULL_SPEED on proper PCB setup
-    //if (!sd.init(SPI_HALF_SPEED)) sd.initErrorHalt();
-    if (!sd.init(SPI_FULL_SPEED)) sd.initErrorHalt();
 
     irrecv.enableIRIn();
     //Serial.print("ram ");
@@ -379,12 +383,13 @@ void ir_decode()
             xbee_on();
             boost_on();
             break;
-/*
-        case 31: // pause
+/*        case 31: // pause
             break;
+*/
         case 35: // rew
+            stage4();
             break;
-        case : // fwd
+/*        case : // fwd
             break;
 */
         }                       // case
@@ -419,6 +424,7 @@ int measure_ext()
 void measure_int()
 {
     int_temp = DS3231_get_treg();
+    kth_temp = 0.25*tk_get_raw(pin_cs_kterm);
 }
 
 void read_counter()
@@ -485,6 +491,8 @@ void stage4()
             //error("write failed");
         //}
         f.close();
+    } else {
+        Serial.println(output);
     }
 }
 
