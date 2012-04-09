@@ -23762,7 +23762,7 @@ body 3.9 mm/JEDEC MS-012AA</description>
 <junction x="226.06" y="134.62"/>
 </segment>
 </net>
-<net name="N$29" class="0">
+<net name="T+" class="0">
 <segment>
 <pinref part="U$3" gate="G$1" pin="T+"/>
 <pinref part="JP9" gate="G$1" pin="1"/>
