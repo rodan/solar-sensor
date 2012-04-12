@@ -619,6 +619,8 @@ void parse_cmd(char *cmd, uint8_t cmdsize)
                     for (i = 0; i < rrv; i++) {
                         Serial.print(f_c[i]);
                     }
+                    // xbees start loosing data after the first 2k if no delay is given
+                    delay(100);
                 }
                 console_send_ok();
             } else {
@@ -678,7 +680,6 @@ void xbee_on()
     } else {
         digitalWrite(pin_xbee_ctrl, HIGH);
     }
-    delay(14);
 }
 
 void xbee_off()
