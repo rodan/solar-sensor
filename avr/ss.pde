@@ -36,6 +36,7 @@
 #include <IRremote.h>
 #include <Sensirion.h>
 #include <max6675.h>
+#include <bmp085.h>
 #include <Wire.h>
 #include <ds3231.h>
 #include <SPI.h>
@@ -45,7 +46,7 @@
 
 #include "ss.h"
 
-#define SENSOR_ID "EHLO s1"
+#define SENSOR_ID 1
 
 // XBEE_ACTIVE_LOW must be 1 with the following jumper settings:
 //   J2 set, J3 open, J4 set, J5 open 
@@ -110,6 +111,9 @@ uint8_t ext_light = 0;
 // Ktherm
 float kth_temp = 0.0;
 
+// bmp085 pressure sensor
+struct bmp085 b;
+
 // rtc
 struct ts t;
 float int_temp;
@@ -143,7 +147,7 @@ unsigned long counter_cpm;      //counts per interval
 //unsigned long counter_interval = 60000;
 unsigned long counter_prev = 0;
 
-#define BUFF_OUT 64
+#define BUFF_OUT 80
 char output[BUFF_OUT];
 
 void setup()
@@ -169,6 +173,8 @@ void setup()
 
     DS3231_init(0x06);
     Serial.begin(9600);
+
+    bmp085_init(&b);
 
     irrecv.enableIRIn();
     //Serial.print("ram ");
@@ -322,6 +328,7 @@ void ir_decode()
 */
         case 56:               // AV
             Serial.println("");
+            Serial.print("EHLO s");
             Serial.println(SENSOR_ID);
             break;
 /*
@@ -418,6 +425,10 @@ int measure_ext()
     ext_dew = sht.calcDewpoint(ext_hum, ext_temp);
 
     ext_light = analogRead(pin_light) / 4;
+
+    b.oss = 3;
+    bmp085_read_sensors(&b);
+
     return 0;
 }
 
@@ -468,7 +479,7 @@ void stage3()
 void stage4()
 {
     char f_name[9];
-    char tmp1[7], tmp2[7], tmp3[7], tmp4[7];
+    char tmp1[7], tmp2[7], tmp3[7], tmp4[7], tmp5[9];
     stage_num = 4;
     //debug_status = "s4 save";
 
@@ -477,11 +488,18 @@ void stage4()
 
     DS3231_get(&t);
 
+    // floats cannot be used as %f in *printf()
+    dtostrf(ext_temp, 2, 2, tmp1);
+    dtostrf(ext_hum, 2, 2, tmp2);
+    dtostrf(ext_dew, 2, 2, tmp3);
+    dtostrf(int_temp, 2, 2, tmp4);
+    dtostrf(kth_temp, 2, 2, tmp5);
+
     snprintf(output, BUFF_OUT,
-             "%d-%02d-%02dT%02d:%02d:%02d %sC %s%% %sC %dL %sC %dcpm\r\n", t.year,
-             t.mon, t.mday, t.hour, t.min, t.sec, dtostrf(ext_temp, 2, 2, tmp1),
-             dtostrf(ext_hum, 2, 2, tmp2), dtostrf(ext_dew, 2, 2, tmp3),
-             ext_light, dtostrf(int_temp, 2, 2, tmp4), counter_cpm);
+             "s%d %d-%02d-%02dT%02d:%02d:%02d %s %s %s %ld %d %ld %s %s\r\n", SENSOR_ID, t.year,
+             t.mon, t.mday, t.hour, t.min, t.sec, tmp1,
+             tmp2, tmp3, b.ppa, 
+             ext_light, counter_cpm, tmp4, tmp5);
 
     if ( op_mode == OP_AUTOMATIC ) {
         snprintf(f_name, 9, "%d%02d%02d", t.year, t.mon, t.mday);
@@ -503,6 +521,7 @@ void stage5()
     //debug_status = "s5 transf";
 
     Serial.println("");
+    Serial.print("EHLO s");
     Serial.println(SENSOR_ID);
     shtd_prev = millis();
 }

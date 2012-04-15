@@ -160,7 +160,7 @@ int ss_get_method_in_str(ss_request_t * r)
         r->method = SS_REQ_ERR;
     } else if (ss_str2_cmp(buff, 'O', 'K')) {
         r->method = SS_REQ_OK;
-    } else if (buff[0] > 47 && buff[0] < 58) {  // numbers
+    } else if (buff[0] == 115) {  // s[0-9]  sensor id
         r->method = SS_REQ_DATA;
         r->target = &r->in_str.str[skip];
     } else if (ss_str3_cmp(buff, 'D', 'B', 'G')) {
@@ -213,6 +213,8 @@ int ss_process_get_str(ss_connection_t * c)
             fprintf(stdout, "%s\n", c->r.target);
         }
     } else if (c->r.method == SS_REQ_DATA) {
+        if (verb > 0)
+            fprintf(stdout, "%s\n", &c->r.in_str.str[c->r.in_str.skip]);
         memset(sql_q, 0, H_MAX);
         snprintf(sql_q, H_MAX, "insert into sensors values ('");        // 29 chars to begin with
 
@@ -221,8 +223,7 @@ int ss_process_get_str(ss_connection_t * c)
 
         for (i = 0; i < H_MAX - c->r.in_str.skip; i++) {
             in = c->r.target[i];
-            if (in == 'C' || in == 'c' || in == 'p' || in == 'm'
-                || in == 'L' || in == '%') {
+            if (in == 's') {
             }                   // ignore units
             else if (in == ' ') {       // replace spaces with sql delimiters
                 strncat(sql_q, "','", 4);

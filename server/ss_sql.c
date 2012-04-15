@@ -30,7 +30,7 @@ int init_db(char *fname)
         }
 
         rc = sqlite3_exec(db,
-                          "create table sensors (date DATE PRIMARY KEY UNIQUE, t_ext REAL, h_ext REAL, td_ext REAL, l_ext REAL, t_int REAL, counts REAL);",
+                          "create table sensors (id REAL, date DATE PRIMARY KEY UNIQUE, t_ext REAL, h_ext REAL, td_ext REAL, p_ext REAL, l_ext REAL, counts REAL, t_int REAL, t_tk REAL);",
                           callback_db, 0, &zErrMsg);
         if (rc != SQLITE_OK) {
             fprintf(stderr, "SQL error: %s\n", zErrMsg);
