@@ -70,7 +70,7 @@ int ss_process_in_str(ss_connection_t * c)
 
                     retr = get_file_retr(fname);
 
-                    if (retr == 0) {
+                    if (retr < 0) {
                         init_file_retr(fname, 0, 0);
                     }
 

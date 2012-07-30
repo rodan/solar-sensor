@@ -62,7 +62,7 @@ int get_file_retr(char *fname)
         rv = sql_exec_i(q);
         return rv;
     }
-    return 0;
+    return -1;
 }
 
 int set_file_retr(char *fname, int retr)

@@ -43,7 +43,6 @@
 #include <SdFat.h>
 #include <SdFatUtil.h>
 
-
 #include "ss.h"
 
 #define SENSOR_ID 1
@@ -64,8 +63,10 @@
 #define pin_counter 2
 #define pin_ir 3
 #define pin_boost_sw 4
-#define pin_SHT_DATA 7
+//#define pin_SHT_DATA 7
 #define pin_SHT_SCK 8
+#define pin_SHT_DATA A4
+//#define pin_SHT_SCK  A5
 #define pin_cs_kterm 9
 
 // analog pins
@@ -84,24 +85,16 @@ unsigned char op_mode = OP_AUTOMATIC;
 // must be an integer between 5 and 59
 unsigned char sleep_period = 30;
 
-// initial wait, warmup, counter, hum, post wait, sleep
-unsigned long stage_timing[7] =
-    { 2000, 4000, 60000, 1000, 20000, 5000, (sleep_period * 60000) - 108000 };
 unsigned long stage_prev = 0;
 boolean stage_started[7] = { false, false, false, false, false, false, false };
-
 byte stage_num = 0;
 
 // refresh in OP_MANUAL mode
-unsigned long refresh_interval = 2000;
 unsigned long refresh_prev = 0;
 
 // not much space for misc buffers
 #define BUFF_MAX 64
 
-// sht15 variables
-Sensirion sht = Sensirion(pin_SHT_DATA, pin_SHT_SCK);
-uint16_t sht_raw;
 
 float ext_temp = 0.0;
 float ext_hum = 0.0;
@@ -122,9 +115,8 @@ float int_temp;
 char recv[BUFF_MAX];
 uint8_t recv_size = 0;
 
-// shut down is here is no server interaction
-unsigned long shtd_interval = 20000;
 unsigned long shtd_prev = 0;
+
 
 // uSD
 #define BUFF_LOG 64
@@ -133,7 +125,6 @@ SdFile f;
 
 // infrared remote
 IRrecv irrecv(pin_ir);
-decode_results results;
 unsigned long result_last = 4294967295UL;       // -1
 unsigned int ir_delay = 300;    // delay between repeated button presses
 unsigned long ir_delay_prev = 0;
@@ -147,6 +138,7 @@ unsigned long counter_cpm;      //counts per interval
 //unsigned long counter_interval = 60000;
 unsigned long counter_prev = 0;
 
+
 #define BUFF_OUT 80
 char output[BUFF_OUT];
 
@@ -157,6 +149,9 @@ void setup()
     pinMode(pin_boost_sw, OUTPUT);
 
     xbee_off();
+    Wire.begin();
+    TWBR = 0xFF; // slow down hardware i2c clock
+                 // since we use longer than recommended wires
 
     // verify if Alarm2 woked us up  ( status register XXXX XX1X )
     if ((DS3231_get_sreg() & 0x02) == 0) {
@@ -184,6 +179,10 @@ void setup()
 
 void loop()
 {
+
+    // initial wait, warmup, counter, hum, post wait, sleep
+    unsigned long stage_timing[7] =
+        { 2000, 4000, 60000, 1000, 20000, 5000, (sleep_period * 60000) - 108000 };
     unsigned long now = millis();
 
     ir_decode();
@@ -233,7 +232,8 @@ void loop()
             }
             break;
         case 5:
-            if (!stage_started[6] && ((now - stage_prev > stage_timing[5]) && (now - shtd_prev > shtd_interval) )) {
+            if (!stage_started[6] && ((now - stage_prev > stage_timing[5]) && (now - shtd_prev > 20000) )) {
+                // if there is more than 20s of inactivity, shutdown
                 stage_prev = now;
                 stage_started[5] = false;
                 stage_started[6] = true;
@@ -249,7 +249,7 @@ void loop()
             break;
 
         }                       // switch
-    } else {
+    } else { // manual operation
 
         read_counter();
 
@@ -258,17 +258,17 @@ void loop()
             counter_c_last = counter_c;
             counter_prev = now;
         }
-        // once a while refresh stuff
-        if ((now - refresh_prev > refresh_interval)) {
+
+        // once a while (10s) refresh stuff
+        if ((now - refresh_prev > 10000)) {
             refresh_prev = now;
 
             // if the RTC woke up the device in the meantime
             if ((DS3231_get_sreg() & 0x02) == 2) {
-                // clear all alarms and thus go to sleep
+                // clear all alarms and thus disable RTC poweron
                 DS3231_set_sreg(0x00);
             }
         }
-
     }
 
 }
@@ -277,6 +277,7 @@ void loop()
 
 void ir_decode()
 {
+    decode_results results;
     unsigned long now = millis();
 
     //int ir_number = -1;
@@ -337,10 +338,15 @@ void ir_decode()
         case 35: // green
           break;
         case 14: // yellow
-          break;
+          break; */
         case 12: // power
+            op_mode = OP_MANUAL;
+            if ((DS3231_get_sreg() & 0x02) == 2) {
+                // clear all alarms and thus disable RTC poweron
+                DS3231_set_sreg(0x00);
+            }
             break;
-        case 50: // zoom
+/*        case 50: // zoom
             break;
         case 39: // sub
             break;
@@ -414,6 +420,13 @@ void ir_decode()
 
 int measure_ext()
 {
+    uint16_t sht_raw;
+    Sensirion sht = Sensirion(pin_SHT_DATA, pin_SHT_SCK);
+
+    // disable hardware i2c
+    TWCR &= ~(1<<2); 
+    pinMode(pin_SHT_SCK, OUTPUT);
+
     sht.meas(TEMP, &sht_raw, BLOCK);
     ext_temp = sht.calcTemp(sht_raw);
     if (ext_temp == -40.1) {
@@ -425,6 +438,10 @@ int measure_ext()
     ext_dew = sht.calcDewpoint(ext_hum, ext_temp);
 
     ext_light = analogRead(pin_light) / 4;
+
+    TWCR |= (1<<2); // enable hardware i2c
+    //Wire.begin();
+    //TWBR = 0xFF;
 
     b.oss = 3;
     bmp085_read_sensors(&b);
@@ -535,7 +552,7 @@ void stage6()
 
     setup_a2();
 
-    // clear all alarms and thus go to sleep
+    // clear all alarms and thus disable RTC poweron
     DS3231_set_sreg(0x00);
     //system_sleep();
 
