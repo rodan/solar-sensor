@@ -5,6 +5,7 @@
    - read thermocouple temperature
    - read and set alarms in the real time clock
    - log sensor data on a microSD card
+   - control room heating or cooling via RF power switches
    - use a communication protocol to send data to a PC
 
   there are 3 components in this repository:
@@ -20,8 +21,9 @@
   ds3231      https://github.com/rodan/ds3231
   max6675     https://github.com/rodan/max6675
   bmp085      https://github.com/rodan/bmp085
-  Sensirion   http://www.arduino.cc/playground/Code/Sensirion
-  IRremote    http://www.arcfn.com/2009/08/multi-protocol-infrared-remote-library.html
+  sht15       http://www.arduino.cc/playground/Code/Sensirion
+  IRremote    https://github.com/shirriff/Arduino-IRremote
+  SDfatlib    http://code.google.com/p/sdfatlib/
 
   dependencies for the server-side software:
 

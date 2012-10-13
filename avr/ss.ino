@@ -7,6 +7,7 @@
    - read and set alarms in the real time clock
    - log sensor data on an microSD card
    - use a communication protocol to send data to a server
+   - control room heating or cooling via RF power switches (based on internal temperatures)
 
   see the README file for more info.
 
@@ -32,11 +33,11 @@
    
 */
 
-#include <SoftwareSerial.h>
 #include <IRremote.h>
 #include <Sensirion.h>
 #include <max6675.h>
 #include <bmp085.h>
+#include <intertechno.h>
 #include <Wire.h>
 #include <ds3231.h>
 #include <SPI.h>
@@ -63,15 +64,14 @@
 #define pin_counter 2
 #define pin_ir 3
 #define pin_boost_sw 4
-//#define pin_SHT_DATA 7
+#define pin_rf 5
 #define pin_SHT_SCK 8
-#define pin_SHT_DATA A4
-//#define pin_SHT_SCK  A5
 #define pin_cs_kterm 9
 
 // analog pins
 #define pin_xbee_ctrl A2
 #define pin_light A3
+#define pin_SHT_DATA A4
 //SDA   A4
 //SCL   A5
 
@@ -106,6 +106,9 @@ float kth_temp = 0.0;
 
 // bmp085 pressure sensor
 struct bmp085 b;
+
+// intertechno rf switch
+struct it its;
 
 // rtc
 struct ts t;
@@ -170,6 +173,26 @@ void setup()
     Serial.begin(9600);
 
     bmp085_init(&b);
+
+    its.pin = pin_rf;
+
+#if defined(F_CPU) && F_CPU == 8000000
+    its.rf_cal_on = -218;
+    its.rf_cal_off = -216;
+#elif defined(F_CPU) && F_CPU == 16000000
+    its.rf_cal_on = -104;
+    its.rf_cal_off = -104;
+#else
+    // mkaaaaay
+    its.rf_cal_on = -140;
+    its.rf_cal_off = -140;
+#endif
+
+    pinMode(its.pin, OUTPUT);
+    digitalWrite(its.pin, LOW);
+
+    // force clear alarms to stop RTC poweron
+    //DS3231_set_sreg(0x00);
 
     irrecv.enableIRIn();
     //Serial.print("ram ");
@@ -380,11 +403,13 @@ void ir_decode()
             break;
         case 17: // vol-
             break;
+*/
         case 28: // ch+
+            rf_tx_cmd(its, 0xb6, INTERTECHNO_CMD_ON);
             break;
         case 29: // ch-
+            rf_tx_cmd(its, 0xb6, INTERTECHNO_CMD_OFF);
             break;
-*/
         case 36:               // record
             Serial.println("GET time");
             break;
