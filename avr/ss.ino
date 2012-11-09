@@ -34,6 +34,7 @@
 */
 
 #include <IRremote.h>
+#include <IRremoteInt.h>
 #include <Sensirion.h>
 #include <max6675.h>
 #include <bmp085.h>
@@ -83,10 +84,16 @@ unsigned char op_mode = OP_AUTOMATIC;
 
 // how many minutes to sleep between automatic measurements
 // must be an integer between 5 and 59
+
+#ifdef DATALOGGER
+unsigned char sleep_period = 1;
+#else
 unsigned char sleep_period = 30;
+#endif
 
 unsigned long stage_prev = 0;
 boolean stage_started[7] = { false, false, false, false, false, false, false };
+
 byte stage_num = 0;
 
 // refresh in OP_MANUAL mode
@@ -94,7 +101,6 @@ unsigned long refresh_prev = 0;
 
 // not much space for misc buffers
 #define BUFF_MAX 64
-
 
 float ext_temp = 0.0;
 float ext_hum = 0.0;
@@ -120,7 +126,6 @@ uint8_t recv_size = 0;
 
 unsigned long shtd_prev = 0;
 
-
 // uSD
 #define BUFF_LOG 64
 SdFat sd;
@@ -141,7 +146,6 @@ unsigned long counter_cpm;      //counts per interval
 //unsigned long counter_interval = 60000;
 unsigned long counter_prev = 0;
 
-
 #define BUFF_OUT 80
 char output[BUFF_OUT];
 
@@ -153,21 +157,22 @@ void setup()
 
     xbee_off();
     Wire.begin();
-    TWBR = 0xFF; // slow down hardware i2c clock
-                 // since we use longer than recommended wires
+    TWBR = 0xFF;                // slow down hardware i2c clock
+    // since we use longer than recommended wires
 
     // verify if Alarm2 woked us up  ( status register XXXX XX1X )
     if ((DS3231_get_sreg() & 0x02) == 0) {
         // powered up by manual switch, not by alarm
         op_mode = OP_MANUAL;
         //stage4();
-        setup_a2();
     }
-
+        
+    setup_a2();
     // this will pull up D9 - needed for the SD card SPI communication
     tk_init(pin_cs_kterm);
 
-    if (!sd.init(SPI_HALF_SPEED)) sd.initErrorHalt();
+    if (!sd.init(SPI_HALF_SPEED))
+        sd.initErrorHalt();
 
     DS3231_init(0x06);
     Serial.begin(9600);
@@ -177,22 +182,20 @@ void setup()
     its.pin = pin_rf;
 
 #if defined(F_CPU) && F_CPU == 8000000
-    its.rf_cal_on = -218;
-    its.rf_cal_off = -216;
+    its.rf_cal_on = -7;
+    its.rf_cal_off = -7;
 #elif defined(F_CPU) && F_CPU == 16000000
-    its.rf_cal_on = -104;
-    its.rf_cal_off = -104;
+    its.rf_cal_on = -1;
+    its.rf_cal_off = -1;
 #else
     // mkaaaaay
-    its.rf_cal_on = -140;
-    its.rf_cal_off = -140;
+    its.rf_cal_on = -1;
+    its.rf_cal_off = -1;
 #endif
 
     pinMode(its.pin, OUTPUT);
     digitalWrite(its.pin, LOW);
 
-    // force clear alarms to stop RTC poweron
-    //DS3231_set_sreg(0x00);
 
     irrecv.enableIRIn();
     //Serial.print("ram ");
@@ -204,10 +207,14 @@ void loop()
 {
 
     // initial wait, warmup, counter, hum, post wait, sleep
-    unsigned long stage_timing[7] =
-        { 2000, 4000, 60000, 1000, 20000, 5000, (sleep_period * 60000) - 108000 };
-    unsigned long now = millis();
+    //unsigned long stage_timing[7] = { 2000, 4000, 60000, 1000, 20000, 5000, (sleep_period * 60000) - 108000 };
+#ifdef DATALOGGER
+    unsigned long stage_timing[7] = { 2000, 4000, 1, 1000, 20000, 5000, (sleep_period * 60000) - 108000 };
+#else
+    unsigned long stage_timing[7] = { 2000, 4000, 60000, 1000, 20000, 5000, (sleep_period * 60000) - 108000 };
+#endif
 
+    unsigned long now = millis();
     ir_decode();
     console_decode();
 
@@ -255,7 +262,9 @@ void loop()
             }
             break;
         case 5:
-            if (!stage_started[6] && ((now - stage_prev > stage_timing[5]) && (now - shtd_prev > 20000) )) {
+            if (!stage_started[6]
+                && ((now - stage_prev > stage_timing[5])
+                    && (now - shtd_prev > 20000))) {
                 // if there is more than 20s of inactivity, shutdown
                 stage_prev = now;
                 stage_started[5] = false;
@@ -272,7 +281,7 @@ void loop()
             break;
 
         }                       // switch
-    } else { // manual operation
+    } else {                    // manual operation
 
         read_counter();
 
@@ -281,7 +290,6 @@ void loop()
             counter_c_last = counter_c;
             counter_prev = now;
         }
-
         // once a while (10s) refresh stuff
         if ((now - refresh_prev > 10000)) {
             refresh_prev = now;
@@ -290,6 +298,7 @@ void loop()
             if ((DS3231_get_sreg() & 0x02) == 2) {
                 // clear all alarms and thus disable RTC poweron
                 DS3231_set_sreg(0x00);
+                setup_a2();
             }
         }
     }
@@ -362,7 +371,7 @@ void ir_decode()
           break;
         case 14: // yellow
           break; */
-        case 12: // power
+        case 12:               // power
             op_mode = OP_MANUAL;
             if ((DS3231_get_sreg() & 0x02) == 2) {
                 // clear all alarms and thus disable RTC poweron
@@ -403,28 +412,28 @@ void ir_decode()
             break;
         case 17: // vol-
             break;
-*/
         case 28: // ch+
             rf_tx_cmd(its, 0xb6, INTERTECHNO_CMD_ON);
             break;
         case 29: // ch-
             rf_tx_cmd(its, 0xb6, INTERTECHNO_CMD_OFF);
             break;
+*/
         case 36:               // record
             Serial.println("GET time");
             break;
-        case 54: // stop
+        case 54:               // stop
             xbee_off();
             boost_off();
             break;
-        case 14: // play
+        case 14:               // play
             xbee_on();
             boost_on();
             break;
 /*        case 31: // pause
             break;
 */
-        case 35: // rew
+        case 35:               // rew
             stage4();
             break;
 /*        case : // fwd
@@ -449,7 +458,7 @@ int measure_ext()
     Sensirion sht = Sensirion(pin_SHT_DATA, pin_SHT_SCK);
 
     // disable hardware i2c
-    TWCR &= ~(1<<2); 
+    TWCR &= ~(1 << 2);
     pinMode(pin_SHT_SCK, OUTPUT);
 
     sht.meas(TEMP, &sht_raw, BLOCK);
@@ -464,7 +473,7 @@ int measure_ext()
 
     ext_light = analogRead(pin_light) / 4;
 
-    TWCR |= (1<<2); // enable hardware i2c
+    TWCR |= (1 << 2);           // enable hardware i2c
     //Wire.begin();
     //TWBR = 0xFF;
 
@@ -477,7 +486,7 @@ int measure_ext()
 void measure_int()
 {
     int_temp = DS3231_get_treg();
-    kth_temp = 0.25*tk_get_raw(pin_cs_kterm);
+    kth_temp = 0.25 * tk_get_raw(pin_cs_kterm);
 }
 
 void read_counter()
@@ -496,6 +505,8 @@ void stage1()
     stage_num = 1;
     //debug_status = "s1 warmup";
 
+    Serial.println(millis());
+    Serial.println("s1");
     boost_on();
 }
 
@@ -504,6 +515,8 @@ void stage2()
     stage_num = 2;
     //debug_status = "s2";
 
+    Serial.println(millis());
+    Serial.println("s2");
     counter_c_last = counter_c;
 }
 
@@ -511,6 +524,8 @@ void stage3()
 {
     stage_num = 3;
     //debug_status = "s3";
+    Serial.println(millis());
+    Serial.println("s3");
 
 //  counter_cpm = ( counter_c - counter_c_last ) * 60000.0 / counter_interval;
     counter_cpm = counter_c - counter_c_last;
@@ -524,6 +539,8 @@ void stage4()
     char tmp1[7], tmp2[7], tmp3[7], tmp4[7], tmp5[9];
     stage_num = 4;
     //debug_status = "s4 save";
+    Serial.println(millis());
+    Serial.println("s4");
 
     measure_ext();
     measure_int();
@@ -538,17 +555,16 @@ void stage4()
     dtostrf(kth_temp, 2, 2, tmp5);
 
     snprintf(output, BUFF_OUT,
-             "s%d %d-%02d-%02dT%02d:%02d:%02d %s %s %s %ld %d %ld %s %s\r\n", SENSOR_ID, t.year,
-             t.mon, t.mday, t.hour, t.min, t.sec, tmp1,
-             tmp2, tmp3, b.ppa, 
-             ext_light, counter_cpm, tmp4, tmp5);
+             "s%d %d-%02d-%02dT%02d:%02d:%02d %s %s %s %ld %d %ld %s %s\r\n",
+             SENSOR_ID, t.year, t.mon, t.mday, t.hour, t.min, t.sec, tmp1, tmp2,
+             tmp3, b.ppa, ext_light, counter_cpm, tmp4, tmp5);
 
-    if ( op_mode == OP_AUTOMATIC ) {
+    if (op_mode == OP_AUTOMATIC) {
         snprintf(f_name, 9, "%d%02d%02d", t.year, t.mon, t.mday);
         f.open(f_name, O_RDWR | O_CREAT | O_AT_END);
         f.write(output, strlen(output));
         //if (f.write(output, strlen(output)) != strlen(output)) {
-            //error("write failed");
+        //error("write failed");
         //}
         f.close();
     } else {
@@ -562,6 +578,13 @@ void stage5()
     stage_num = 5;
     //debug_status = "s5 transf";
 
+    Serial.println(millis());
+    Serial.println("s5");
+
+    // zero out the Timer Interrupt Mask Register TIMSK IRremote is using
+    // this will enable much more precise transmission but disable IR commands
+    TIMER_DISABLE_INTR;
+
     Serial.println("");
     Serial.print("EHLO s");
     Serial.println(SENSOR_ID);
@@ -573,14 +596,41 @@ void stage6()
     stage_num = 6;
     //debug_status = "s6 sleep";
 
+    Serial.println(millis());
+    Serial.println("s6");
+
+
+    // home automation
+    // use the radio switches to start/stop the fan or the heater
+
+    // june/july/august heat
+    if ((t.mon > 5) && (t.mon < 9)) {
+        if ((int_temp > 27) && (ext_temp < 24)) {
+            // start the fan/AC/chiller
+            rf_tx_cmd(its, 0xb7, INTERTECHNO_CMD_ON);
+        } else {
+            // stop the fan/AC/chiller
+            rf_tx_cmd(its, 0xb7, INTERTECHNO_CMD_OFF);
+        }
+    }
+
+    // nov/dec/jan cold
+    if ((t.mon > 10) && (t.mon < 2)) {
+        if ((int_temp < 19) && (ext_temp < 10)) {
+            // start the heater
+            rf_tx_cmd(its, 0xb6, INTERTECHNO_CMD_ON);
+        } else {
+            // stop the heater
+            rf_tx_cmd(its, 0xb6, INTERTECHNO_CMD_OFF);
+        }
+    }
+
     xbee_off();
 
     setup_a2();
 
     // clear all alarms and thus disable RTC poweron
     DS3231_set_sreg(0x00);
-    //system_sleep();
-
 }
 
 // set Alarm2 to wake up the device
@@ -588,7 +638,12 @@ void setup_a2()
 {
     unsigned char wakeup_min;
     DS3231_get(&t);
+#ifdef DATALOGGER
+    wakeup_min = t.min + sleep_period;
+#else
     wakeup_min = (t.min / sleep_period + 1) * sleep_period;
+#endif
+
     if (wakeup_min > 59)
         wakeup_min -= 60;
 
@@ -659,7 +714,7 @@ void parse_cmd(char *cmd, uint8_t cmdsize)
         // GET 20111020
         // this cmd will read that file from the uSD
 
-        if (stage_num == 5) 
+        if (stage_num == 5)
             shtd_prev = millis();
 
         strncpy(f_name, &cmd[4], 9);

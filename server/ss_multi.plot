@@ -72,7 +72,7 @@ set origin 0.0,0.336
 
 #set ylabel 'pressure (Pa)'
 set ytics 1000
-set yrange [96000:102000]
+set yrange [98000:102000]
 
 plot "< sqlite3 /var/lib/ss_daemon/data_tmp.db 'select date, p_ext from sensors order by date desc limit 0, 96;'" \
     using 1:2 index 0 title "ext pressure (Pa)" with lines lt rgb '#867088' lw 2
