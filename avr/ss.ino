@@ -33,17 +33,37 @@
    
 */
 
+#include "config.h"
+
+#ifdef IR_REMOTE
 #include <IRremote.h>
 #include <IRremoteInt.h>
+#endif
+
+#ifdef SHT15
 #include <Sensirion.h>
+#endif
+
+#ifdef MAX6675
 #include <max6675.h>
+#endif
+
+#ifdef BMP085
 #include <bmp085.h>
+#endif
+
+#ifdef INTERTECHNO
 #include <intertechno.h>
+#endif
+
 #include <Wire.h>
 #include <ds3231.h>
 #include <SPI.h>
+
+#ifdef SDFAT
 #include <SdFat.h>
 #include <SdFatUtil.h>
+#endif
 
 #include "ss.h"
 
@@ -105,16 +125,21 @@ unsigned long refresh_prev = 0;
 float ext_temp = 0.0;
 float ext_hum = 0.0;
 float ext_dew = 0.0;
+uint32_t ext_pressure = 0;
 uint8_t ext_light = 0;
 
 // Ktherm
 float kth_temp = 0.0;
 
+#ifdef BMP085
 // bmp085 pressure sensor
 struct bmp085 b;
+#endif
 
+#ifdef INTERTECHNO
 // intertechno rf switch
 struct it its;
+#endif
 
 // rtc
 struct ts t;
@@ -126,16 +151,20 @@ uint8_t recv_size = 0;
 
 unsigned long shtd_prev = 0;
 
-// uSD
+#ifdef SDFAT
 #define BUFF_LOG 64
+// uSD
 SdFat sd;
 SdFile f;
+#endif
 
+#ifdef IR_REMOTE
 // infrared remote
 IRrecv irrecv(pin_ir);
 unsigned long result_last = 4294967295UL;       // -1
 unsigned int ir_delay = 300;    // delay between repeated button presses
 unsigned long ir_delay_prev = 0;
+#endif
 
 // counter
 boolean counter_state = HIGH;
@@ -168,19 +197,29 @@ void setup()
     }
         
     setup_a2();
-    // this will pull up D9 - needed for the SD card SPI communication
+    
+    // this will pull up D9 - needed for later SPI
+#ifdef MAX6675
     tk_init(pin_cs_kterm);
+#else
+    pinMode(pin_cs_kterm, OUTPUT);
+    digitalWrite(pin_cs_kterm, HIGH);
+#endif
 
+#ifdef SDFAT
     if (!sd.init(SPI_HALF_SPEED))
         sd.initErrorHalt();
+#endif
 
     DS3231_init(0x06);
     Serial.begin(9600);
 
+#ifdef BMP085
     bmp085_init(&b);
+#endif
 
+#ifdef INTERTECHNO
     its.pin = pin_rf;
-
 #if defined(F_CPU) && F_CPU == 8000000
     its.rf_cal_on = -7;
     its.rf_cal_off = -7;
@@ -192,12 +231,14 @@ void setup()
     its.rf_cal_on = -1;
     its.rf_cal_off = -1;
 #endif
-
     pinMode(its.pin, OUTPUT);
     digitalWrite(its.pin, LOW);
 
+#endif
 
+#ifdef IR_REMOTE
     irrecv.enableIRIn();
+#endif
     //Serial.print("ram ");
     //Serial.println(FreeRam());
     //Serial.println("?");
@@ -215,7 +256,11 @@ void loop()
 #endif
 
     unsigned long now = millis();
+
+#ifdef IR_REMOTE
     ir_decode();
+#endif
+
     console_decode();
 
     if (op_mode == OP_AUTOMATIC) {
@@ -307,6 +352,7 @@ void loop()
 
 // IR
 
+#ifdef IR_REMOTE
 void ir_decode()
 {
     decode_results results;
@@ -449,11 +495,14 @@ void ir_decode()
     }
 
 }
+#endif
 
 //   sensors
 
 int measure_ext()
 {
+
+#ifdef SHT15
     uint16_t sht_raw;
     Sensirion sht = Sensirion(pin_SHT_DATA, pin_SHT_SCK);
 
@@ -471,14 +520,22 @@ int measure_ext()
     ext_hum = sht.calcHumi(sht_raw, ext_temp);
     ext_dew = sht.calcDewpoint(ext_hum, ext_temp);
 
-    ext_light = analogRead(pin_light) / 4;
-
     TWCR |= (1 << 2);           // enable hardware i2c
     //Wire.begin();
     //TWBR = 0xFF;
+#else
+    ext_hum = 0;
+    ext_temp = 0;
+    ext_dew = 0;
+#endif
 
+#ifdef BMP085
     b.oss = 3;
     bmp085_read_sensors(&b);
+    ext_pressure = b.ppa;
+#endif
+
+    ext_light = analogRead(pin_light) / 4;
 
     return 0;
 }
@@ -486,7 +543,9 @@ int measure_ext()
 void measure_int()
 {
     int_temp = DS3231_get_treg();
+#ifdef MAX6675
     kth_temp = 0.25 * tk_get_raw(pin_cs_kterm);
+#endif
 }
 
 void read_counter()
@@ -535,7 +594,6 @@ void stage3()
 
 void stage4()
 {
-    char f_name[9];
     char tmp1[7], tmp2[7], tmp3[7], tmp4[7], tmp5[9];
     stage_num = 4;
     //debug_status = "s4 save";
@@ -557,9 +615,11 @@ void stage4()
     snprintf(output, BUFF_OUT,
              "s%d %d-%02d-%02dT%02d:%02d:%02d %s %s %s %ld %d %ld %s %s\r\n",
              SENSOR_ID, t.year, t.mon, t.mday, t.hour, t.min, t.sec, tmp1, tmp2,
-             tmp3, b.ppa, ext_light, counter_cpm, tmp4, tmp5);
+             tmp3, ext_pressure, ext_light, counter_cpm, tmp4, tmp5);
 
     if (op_mode == OP_AUTOMATIC) {
+#ifdef SDFAT
+        char f_name[9];
         snprintf(f_name, 9, "%d%02d%02d", t.year, t.mon, t.mday);
         f.open(f_name, O_RDWR | O_CREAT | O_AT_END);
         f.write(output, strlen(output));
@@ -567,6 +627,7 @@ void stage4()
         //error("write failed");
         //}
         f.close();
+#endif
     } else {
         Serial.println(output);
     }
@@ -581,9 +642,11 @@ void stage5()
     Serial.println(millis());
     Serial.println("s5");
 
+#ifdef IR_REMOTE
     // zero out the Timer Interrupt Mask Register TIMSK IRremote is using
     // this will enable much more precise transmission but disable IR commands
     TIMER_DISABLE_INTR;
+#endif
 
     Serial.println("");
     Serial.print("EHLO s");
@@ -599,7 +662,7 @@ void stage6()
     Serial.println(millis());
     Serial.println("s6");
 
-
+#ifdef INTERTECHNO
     // home automation
     // use the radio switches to start/stop the fan or the heater
 
@@ -624,6 +687,7 @@ void stage6()
             rf_tx_cmd(its, 0xb6, INTERTECHNO_CMD_OFF);
         }
     }
+#endif
 
     xbee_off();
 
@@ -690,13 +754,14 @@ void console_decode()
 
 void parse_cmd(char *cmd, uint8_t cmdsize)
 {
-    char f_c[BUFF_LOG];
-    int i;
-    int rrv = BUFF_LOG;
     char f_name[9];
-    //unsigned int f_pos = 0;
+
+#ifdef SDFAT
+    int i;
     unsigned int f_size;
-    //unsigned int f_buffsize = BUFF_LOG;
+    char f_c[BUFF_LOG];
+    int rrv = BUFF_LOG;
+#endif
 
 /*     
     Serial.print("DBG cmd='");
@@ -722,6 +787,7 @@ void parse_cmd(char *cmd, uint8_t cmdsize)
             Serial.println(output);
             console_send_ok();
         } else {
+#ifdef SDFAT
             f.open(f_name, O_READ);
             f_size = f.fileSize();
             Serial.print("LEN ");
@@ -744,6 +810,9 @@ void parse_cmd(char *cmd, uint8_t cmdsize)
             }
 
             f.close();
+#else
+            console_send_err();
+#endif
         }
     } else if (cmd[0] == 72) {
         if (strncmp(cmd, "HALT", 4) == 0) {
