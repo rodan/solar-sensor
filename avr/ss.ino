@@ -639,9 +639,6 @@ void stage5()
     stage_num = 5;
     //debug_status = "s5 transf";
 
-    Serial.println(millis());
-    Serial.println("s5");
-
 #ifdef IR_REMOTE
     // zero out the Timer Interrupt Mask Register TIMSK IRremote is using
     // this will enable much more precise transmission but disable IR commands
