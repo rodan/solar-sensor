@@ -10,6 +10,6 @@
 #define INTERTECHNO
 #define SDFAT
 
-
+#define DEBUG
 
 #endif

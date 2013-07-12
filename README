@@ -8,15 +8,16 @@
    - control room heating or cooling via RF power switches
    - use a communication protocol to send data to a PC
 
-  there are 3 components in this repository:
-  avr       - contains the Arduino code for the microcontroller
-  hardware  - open source hardware for the main board
-  server    - server-side implementation of the comm protocol
+  there are 4 components in this repository:
+  firmware_arduino  - contains the Arduino source code (avr version)
+  firmware_avr      - stand-alone source code (avr version)
+  hardware_avr      - open source hardware for the main board (avr version)
+  server            - server-side implementation of the comm protocol
 
   pictures of rev02 and rev03 are available at 
             https://picasaweb.google.com/petre.rodan/SolarSensor
 
-  Library dependencies for the included avr software:
+  Library dependencies for firmware_arduino software:
 
   ds3231      https://github.com/rodan/ds3231
   max6675     https://github.com/rodan/max6675

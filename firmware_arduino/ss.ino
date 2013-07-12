@@ -252,7 +252,7 @@ void loop()
 #ifdef DATALOGGER
     unsigned long stage_timing[7] = { 2000, 4000, 1, 1000, 20000, 5000, (sleep_period * 60000) - 108000 };
 #else
-    unsigned long stage_timing[7] = { 2000, 4000, 60000, 1000, 20000, 5000, (sleep_period * 60000) - 108000 };
+    unsigned long stage_timing[7] = { 2000, 4000, 60000, 1000, 20000, 60000, (sleep_period * 60000) - 108000 };
 #endif
 
     unsigned long now = millis();
@@ -309,7 +309,7 @@ void loop()
         case 5:
             if (!stage_started[6]
                 && ((now - stage_prev > stage_timing[5])
-                    && (now - shtd_prev > 20000))) {
+                    || (now - shtd_prev > 20000))) {
                 // if there is more than 20s of inactivity, shutdown
                 stage_prev = now;
                 stage_started[5] = false;
@@ -350,8 +350,17 @@ void loop()
 
 }
 
-// IR
+#ifdef DEBUG
+void log_debug(const char *s)
+{
+    Serial.print("DBG ");
+    Serial.print(millis());
+    Serial.print(" ");
+    Serial.println(s);
+}
+#endif
 
+// IR
 #ifdef IR_REMOTE
 void ir_decode()
 {
@@ -562,29 +571,35 @@ void read_counter()
 void stage1()
 {
     stage_num = 1;
-    //debug_status = "s1 warmup";
 
-    Serial.println(millis());
-    Serial.println("s1");
+#ifdef DEBUG
+    const char msg[] = "s1";
+    log_debug(msg);
+#endif
+
     boost_on();
 }
 
 void stage2()
 {
     stage_num = 2;
-    //debug_status = "s2";
 
-    Serial.println(millis());
-    Serial.println("s2");
+#ifdef DEBUG
+    const char msg[] = "s2";
+    log_debug(msg);
+#endif
+
     counter_c_last = counter_c;
 }
 
 void stage3()
 {
     stage_num = 3;
-    //debug_status = "s3";
-    Serial.println(millis());
-    Serial.println("s3");
+
+#ifdef DEBUG
+    const char msg[] = "s3";
+    log_debug(msg);
+#endif
 
 //  counter_cpm = ( counter_c - counter_c_last ) * 60000.0 / counter_interval;
     counter_cpm = counter_c - counter_c_last;
@@ -596,9 +611,11 @@ void stage4()
 {
     char tmp1[7], tmp2[7], tmp3[7], tmp4[7], tmp5[9];
     stage_num = 4;
-    //debug_status = "s4 save";
-    Serial.println(millis());
-    Serial.println("s4");
+
+#ifdef DEBUG
+    const char msg[] = "s4";
+    log_debug(msg);
+#endif
 
     measure_ext();
     measure_int();
@@ -637,7 +654,11 @@ void stage5()
 {
     // try to talk with the server
     stage_num = 5;
-    //debug_status = "s5 transf";
+
+#ifdef DEBUG
+    const char msg[] = "s5";
+    log_debug(msg);
+#endif
 
 #ifdef IR_REMOTE
     // zero out the Timer Interrupt Mask Register TIMSK IRremote is using
@@ -654,10 +675,11 @@ void stage5()
 void stage6()
 {
     stage_num = 6;
-    //debug_status = "s6 sleep";
 
-    Serial.println(millis());
-    Serial.println("s6");
+#ifdef DEBUG
+    const char msg[] = "s6";
+    log_debug(msg);
+#endif
 
 #ifdef INTERTECHNO
     // home automation

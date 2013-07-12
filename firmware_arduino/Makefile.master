@@ -62,7 +62,7 @@
 
 # Global configuration.
 ARD_REV ?= 100
-ARD_HOME ?= /usr/share/arduino-$(ARD_REV)
+ARD_HOME ?= /local/arduino-$(ARD_REV)
 ARD_BIN ?= /usr/bin
 AVRDUDE ?= avrdude
 AVRDUDE_CONF ?= /etc/avrdude.conf

@@ -1,0 +1,70 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+CC	Makefile	/^CC      = gcc$/;"	m
+CFLAGS	Makefile	/^CFLAGS  = -g -Wall -O2$/;"	m
+EXTRA	Makefile	/^EXTRA  = ..\/AUTHORS ..\/COPYING ..\/ChangeLog \\$/;"	m
+H_MAX	ss_core.h	4;"	d
+PROGS	Makefile	/^PROGS   = ss_daemon$/;"	m
+SRCS	Makefile	/^SRCS   = ss_parser.c ss_log.c ss_sql.c ss_daemon.c$/;"	m
+SS_REQ_DATA	ss_core.h	10;"	d
+SS_REQ_DBG	ss_core.h	13;"	d
+SS_REQ_EHLO	ss_core.h	8;"	d
+SS_REQ_ERR	ss_core.h	12;"	d
+SS_REQ_GET	ss_core.h	7;"	d
+SS_REQ_LEN	ss_core.h	9;"	d
+SS_REQ_OK	ss_core.h	11;"	d
+SS_REQ_UNKNOWN	ss_core.h	6;"	d
+_SS_CORE_H_INCLUDED_	ss_core.h	2;"	d
+_SS_LOG_H_INCLUDED_	ss_log.h	2;"	d
+_SS_PARSER_H_INCLUDED_	ss_parser.h	2;"	d
+_SS_SQL_H_INCLUDED_	ss_sql.h	2;"	d
+c	ss_daemon.c	/^ss_connection_t *c;$/;"	v
+callback_db	ss_sql.c	/^static int callback_db(void *NotUsed, int argc, char **argv, char **azColName)$/;"	f
+close_db	ss_sql.c	/^int close_db()$/;"	f
+close_log	ss_log.c	/^int close_log()$/;"	f
+db	ss_sql.c	/^sqlite3 *db;$/;"	v
+exit_p	ss_daemon.c	/^void exit_p(int sig)$/;"	f
+fd_dev	ss_core.h	/^    int fd_dev;                 \/\/ file descriptor $/;"	m	struct:ss_connection_s
+get_file_retr	ss_sql.c	/^int get_file_retr(char *fname)$/;"	f
+in_str	ss_core.h	/^    ss_str_t in_str;$/;"	m	struct:ss_request_s
+init_db	ss_sql.c	/^int init_db(char *fname)$/;"	f
+init_file_retr	ss_sql.c	/^int init_file_retr(char *fname, int len, int retr)$/;"	f
+init_log	ss_log.c	/^int init_log(char *file, char *mode)$/;"	f
+len	ss_core.h	/^    size_t len;$/;"	m	struct:__anon1
+lockfile	ss_daemon.c	/^char lockfile[] = "\/var\/lock\/LCK..ttyUSB0";$/;"	v
+log_file	ss_log.h	/^FILE *log_file;$/;"	v
+main	ss_daemon.c	/^int main()$/;"	f
+method	ss_core.h	/^    char method;$/;"	m	struct:ss_request_s
+out_str	ss_core.h	/^    ss_str_t out_str;$/;"	m	struct:ss_request_s
+r	ss_core.h	/^    ss_request_t r;$/;"	m	struct:ss_connection_s
+set_file_retr	ss_sql.c	/^int set_file_retr(char *fname, int retr)$/;"	f
+skip	ss_core.h	/^    size_t skip;                \/\/ if command has garbage as prefix, skip this many chars$/;"	m	struct:__anon1
+sleep_period	ss_core.h	16;"	d
+sql_exec	ss_sql.c	/^int sql_exec(char *query)$/;"	f
+sql_exec_i	ss_sql.c	/^int sql_exec_i(char *query)$/;"	f
+sql_q	ss_sql.h	/^char sql_q[H_MAX];$/;"	v
+sql_r	ss_sql.h	/^char sql_r[H_MAX];$/;"	v
+ss_connection_s	ss_core.h	/^struct ss_connection_s {$/;"	s
+ss_connection_t	ss_core.h	/^typedef struct ss_connection_s ss_connection_t;$/;"	t	typeref:struct:ss_connection_s
+ss_daemon_EXTRA	Makefile	/^ss_daemon_EXTRA   = ss_parser.h ss_log.h ss_sql.h ss_core.h$/;"	m
+ss_daemon_OBJS	Makefile	/^ss_daemon_OBJS    = ss_parser.o ss_log.o ss_sql.o ss_daemon.o$/;"	m
+ss_get_method_in_str	ss_parser.c	/^int ss_get_method_in_str(ss_request_t * r)$/;"	f
+ss_get_read	ss_parser.c	/^int ss_get_read(ss_connection_t * reply)$/;"	f
+ss_log	ss_log.c	/^int ss_log(char *fmt, ...)$/;"	f
+ss_process_get_str	ss_parser.c	/^int ss_process_get_str(ss_connection_t * c)$/;"	f
+ss_process_in_str	ss_parser.c	/^int ss_process_in_str(ss_connection_t * c)$/;"	f
+ss_process_out	ss_parser.c	/^int ss_process_out(ss_connection_t * c)$/;"	f
+ss_request_s	ss_core.h	/^struct ss_request_s {$/;"	s
+ss_request_t	ss_core.h	/^typedef struct ss_request_s ss_request_t;$/;"	t	typeref:struct:ss_request_s
+ss_str2_cmp	ss_parser.h	6;"	d
+ss_str3_cmp	ss_parser.h	8;"	d
+ss_str4_cmp	ss_parser.h	10;"	d
+ss_str5_cmp	ss_parser.h	12;"	d
+ss_str_t	ss_core.h	/^} ss_str_t;$/;"	t	typeref:struct:__anon1
+str	ss_core.h	/^    char str[H_MAX];$/;"	m	struct:__anon1
+target	ss_core.h	/^    char *target;$/;"	m	struct:ss_request_s
+verb	ss_core.h	/^char verb;$/;"	v
