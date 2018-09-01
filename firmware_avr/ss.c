@@ -11,7 +11,7 @@
 
   see the README file for more info.
 
-  Author:          Petre Rodan <petre.rodan@simplex.ro>
+  Author:          Petre Rodan <2b4eda@subdimension.ro>
   Revision:        03
   Available from:  https://github.com/rodan/solar-sensor
   License:         GNU GPLv3

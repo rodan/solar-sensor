@@ -57,7 +57,7 @@
 
     Commands: are being given either via the wireless serial interface or via a universal remote control that can speak RC5 (most remotes can).
 
-  Author:          Petre Rodan <petre.rodan@simplex.ro>
+  Author:          Petre Rodan <2b4eda@subdimension.ro>
   Available from:  https://github.com/rodan/solar-sensor
   License:         GNU GPLv3
 
